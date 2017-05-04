@@ -12,7 +12,7 @@ class Step(object):
         self.geo = geo
         
     def __str__(self):
-        return "step: distance = {0}, duration = {1}".format(self.d, self.t)
+        return "step: distance = {0}, duration = {1}".format(self.d, self.c)
  
     
 class Leg(object):
@@ -32,6 +32,7 @@ class Leg(object):
         self.steps.append(step)
         
     def __str__(self):
-        return "leg: distance = {0}, duration = {1}, number of steps = {2}".format(self.d, self.t, len(self.steps) )
+        return "leg: distance = {0}, duration = {1}, number of steps = {2}".format(self.d, self.c, len(self.steps) )
+    
     
     
