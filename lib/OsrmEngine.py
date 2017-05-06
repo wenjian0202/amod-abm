@@ -32,7 +32,8 @@ class OsrmEngine(object):
         can be run at a time
         """
         Popen(["killall", os.path.basename(self.exe_loc)], stdin=PIPE, stdout=PIPE, stderr=PIPE)
-        time.sleep(2)
+        time.sleep(5)
+        print( "The routing server \"http://%s:%d\" is killed" % (self.ghost, self.gport) )
         
     def check_server(self):
         """ Check if server is already running """
@@ -59,9 +60,13 @@ class OsrmEngine(object):
         p = Popen([self.exe_loc, self.map_loc], stdin=PIPE, stdout=PIPE, stderr=PIPE)
         time.sleep(2)
         if requests.get("http://%s:%d" % (self.ghost, self.gport)).status_code == 400:
-            return "The routing server \"http://%s:%d\" starts running" % (self.ghost, self.gport)
+            print( "The routing server \"http://%s:%d\" starts running" % (self.ghost, self.gport) )
         else:
             raise Exception("Map could not be loaded")
+            
+    def restart_server(self):
+        self.kill_server()
+        self.start_server()
             
     def create_url(self, olat, olng, dlat, dlng, steps="false", annotations="false"):
         return "http://{0}:{1}/route/v1/driving/{2},{3};{4},{5}?alternatives=false&steps={6}&annotations={7}&geometries=geojson".format(
@@ -69,18 +74,24 @@ class OsrmEngine(object):
 
     def call_url(self, url):
         """ Send the request and get the response in Json format """
-        # print(url)
-        try:
-            response = requests.get(url)
-            json_response = response.json()
-            code = json_response['code']
-            if code == 'Ok':
-                return (json_response, True)
-            else:
-                print("Error: %s" % (json_response['message']))
-                return (json_response, False)
-        except Exception as err:
-            print("Failed: %s" % (url))
+        count = 0
+        while count < 10:
+            try:
+                response = requests.get(url, timeout=1)
+                json_response = response.json()
+                code = json_response['code']
+                if code == 'Ok':
+                    return (json_response, True)
+                else:
+                    print("Error: %s" % (json_response['message']))
+                    return (json_response, False)
+            except requests.exceptions.Timeout:
+                self.restart_server()
+                count += 1
+            except Exception as err:
+                print("Failed: %s" % (url))
+                return (None, False)
+        print("The routing server \"http://%s:%d\" fails after 10 retries... :(" % (self.ghost, self.gport) )
 
     def get_routing(self, olat, olng, dlat, dlng):
         url = self.create_url(olat, olng, dlat, dlng, steps="true", annotations="false")
