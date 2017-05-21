@@ -32,7 +32,7 @@ class OsrmEngine(object):
         can be run at a time
         """
         Popen(["killall", os.path.basename(self.exe_loc)], stdin=PIPE, stdout=PIPE, stderr=PIPE)
-        time.sleep(5)
+        time.sleep(2)
         print( "The routing server \"http://%s:%d\" is killed" % (self.ghost, self.gport) )
         
     def check_server(self):
@@ -86,6 +86,7 @@ class OsrmEngine(object):
                     print("Error: %s" % (json_response['message']))
                     return (json_response, False)
             except requests.exceptions.Timeout:
+                print(url)
                 self.restart_server()
                 count += 1
             except Exception as err:
