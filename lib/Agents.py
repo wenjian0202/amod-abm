@@ -1,5 +1,6 @@
 import numpy as np
 import copy
+import math
 from collections import deque
 import matplotlib.pyplot as plt
 
@@ -42,7 +43,7 @@ class Leg(object):
         self.tlat = tlat
         self.d = d
         self.t = t
-        self.steps = deque([])
+        self.steps = deque(steps)
         
     def __str__(self):
         return "leg: distance = %.1f, duration = %.1f, number of steps = %d" % (self.d, self.t, len(self.steps) )
@@ -72,8 +73,8 @@ class Veh(object):
     def __init__(self, id, K=4, lng=0.080444, lat=51.381263, T=0.0):
         self.id = id
         self.T = T
-        self.lat = lat + np.random.normal(0.0, 0.015)
-        self.lng = lng + np.random.normal(0.0, 0.020) 
+        self.lat = lat + np.random.normal(0.0, 0.030)
+        self.lng = lng + np.random.normal(0.0, 0.030) 
         self.tlat = lat
         self.tlng = lng
         self.K = K
@@ -101,7 +102,6 @@ class Veh(object):
         self.clear_route()
         for (rid, pod, tlng, tlat) in route:
             self.add_leg(osrm, rid, pod, tlng, tlat)
-        self.update_cost()
         
     def clear_route(self):
         self.route.clear()
@@ -116,9 +116,12 @@ class Veh(object):
         assert len(out['legs']) == 1
         leg = Leg(rid, pod, tlng, tlat, 
                   out['legs'][0]['distance'], out['legs'][0]['duration'], steps=[])
+        t_leg = 0.0
         for s in out['legs'][0]['steps']:
             step = Step(s['distance'], s['duration'], s['geometry']['coordinates'])
+            t_leg += s['duration']
             leg.steps.append(step)
+        assert np.isclose(t_leg, leg.t)
         assert len(step.geo) == 2
         assert step.geo[0] == step.geo[1]
         self.route.append(leg)
@@ -127,15 +130,49 @@ class Veh(object):
         self.d += leg.d
         self.t += leg.t
         
-    def update_cost(self):
+    def update_cost_after_move(self, osrm):
+        c = 0.0
+        if len(self.route) == 0:
+            self.c = c
+            return
+        out = osrm.get_routing(self.lng, self.lat, self.route[0].tlng, self.route[0].tlat)
+        assert len(out['legs']) == 1
+        leg = Leg(self.route[0].rid, self.route[0].pod, self.route[0].tlng, self.route[0].tlat, 
+                  out['legs'][0]['distance'], out['legs'][0]['duration'], steps=[])
+        t_leg = 0.0
+        for s in out['legs'][0]['steps']:
+            step = Step(s['distance'], s['duration'], s['geometry']['coordinates'])
+            t_leg += s['duration']
+            leg.steps.append(step)
+        assert np.isclose(t_leg, leg.t)
+        assert len(step.geo) == 2
+        assert step.geo[0] == step.geo[1]
+        self.route.popleft()
+        self.route.appendleft(leg)
+        t = 0.0
+        d = 0.0
+        n = self.n
+        for leg in self.route:
+            t += leg.t
+            d += leg.d
+            c += n * leg.t * COEF_INVEH
+            n += leg.pod
+            c += t * COEF_WAIT if leg.pod == 1 else 0
+        assert n == 0
+        self.c = c
+        self.t = t
+        self.d = d
+
+    def update_cost_after_build(self):
         c = 0.0
         t = 0.0
         n = self.n
         for leg in self.route:
             t += leg.t
-            c += n * leg.t * B_V
+            c += n * leg.t * COEF_INVEH
             n += leg.pod
-            c += t * B_W if leg.pod == 1 else 0
+            c += t * COEF_WAIT if leg.pod == 1 else 0
+        assert n == 0
         self.c = c
         
     def move_to_time(self, T):
@@ -158,16 +195,24 @@ class Veh(object):
                 done.append( (leg.rid, leg.pod, self.T) )
                 self.pop_leg()
             else:
-                while dT > 0 and len(self.route[0].steps) > 0:
-                    step = self.route[0].steps[0]
+                while dT > 0 and len(leg.steps) > 0:
+                    step = leg.steps[0]
                     if step.t < dT:
                         dT -= step.t
+                        self.T += step.t
                         if self.T >= WARM_UP and self.T <= WARM_UP+SIMULATION:
                             self.Ts += step.t if leg.rid != -1 else 0
                             self.Ds += step.d if leg.rid != -1 else 0
                             self.Tr += step.t if leg.rid == -1 else 0
                             self.Dr += step.d if leg.rid == -1 else 0
                         self.pop_step()
+                        if len(leg.steps) == 0:
+                            # corner case: leg.t extremely small, but still larger than dT
+                            self.jump_to_location(leg.tlng, leg.tlat)
+                            self.n += leg.pod
+                            done.append( (leg.rid, leg.pod, self.T) )
+                            self.pop_leg()
+                            break
                     else:
                         pct = dT / step.t
                         if self.T >= WARM_UP and self.T <= WARM_UP+SIMULATION:
@@ -179,8 +224,10 @@ class Veh(object):
                         self.jump_to_location(step.geo[0][0], step.geo[0][1])
                         self.T = T
                         return done
-        assert dT > 0
-        assert len(self.route) == 0 and self.n == 0
+        assert dT > 0 or np.isclose(dT, 0.0)
+        assert self.T < T or np.isclose(self.T, T)
+        assert len(self.route) == 0 
+        assert self.n == 0
         assert np.isclose(self.d, 0.0)
         assert np.isclose(self.t, 0.0)
         self.T = T
@@ -202,12 +249,13 @@ class Veh(object):
         
     def cut_step(self, pct):
         step = self.route[0].steps[0]
-        dis = 0
+        dis = 0.0
         sega = step.geo[0]
         for segb in step.geo[1:]:
             dis += np.sqrt( (sega[0] - segb[0])**2 + (sega[1] - segb[1])**2)
             sega = segb
-        dis_ = 0
+        dis_ = 0.0
+        _dis = 0.0
         sega = step.geo[0]
         for segb in step.geo[1:]:
             _dis = np.sqrt( (sega[0] - segb[0])**2 + (sega[1] - segb[1])**2)
@@ -217,11 +265,9 @@ class Veh(object):
             sega = segb
         while step.geo[0] != sega:
             step.geo.pop(0)
-        _pct = (pct * dis - dis_ + _dis) / _dis
-        
+        _pct = (pct * dis - dis_ + _dis) / _dis       
         step.geo[0][0] = sega[0] + _pct * (segb[0] - sega[0])
-        step.geo[0][1] = sega[1] + _pct * (segb[1] - sega[1])
-        
+        step.geo[0][1] = sega[1] + _pct * (segb[1] - sega[1])     
         self.t -= step.t * pct
         self.d -= step.d * pct
         self.route[0].t -= step.t * pct
@@ -242,14 +288,14 @@ class Veh(object):
 
                         
     def __str__(self):
-        str =  "veh %d at (%.7f, %.7f) when t = %.3f; occupancy = %d/%d;" % (
+        str =  "veh %d at (%.7f, %.7f) when t = %.3f; occupancy = %d/%d" % (
             self.id, self.lng, self.lat, self.T, self.n, self.K)
-        str += "\n  service distance/time travelled: %.1f, %.1f; rebalancing distance/time travelled: %.1f, %.1f" % (
+        str += "\n  service dist/time: %.1f, %.1f; rebalancing dist/time: %.1f, %.1f" % (
             self.Ds, self.Ts, self.Dr, self.Tr)
-        str += "\n  has %d leg(s), distance = %.1f, duration = %.1f，cost = %.1f" % (
+        str += "\n  has %d leg(s), dist = %.1f, dura = %.1f，cost = %.1f" % (
             len(self.route), self.d, self.t, self.c)
         for leg in self.route:
-            str += "\n    %s: req %d at (%.7f, %.7f), distance = %.1f, duration = %.1f" % (
+            str += "\n    %s req %d at (%.7f, %.7f), dist = %.1f, dura = %.1f" % (
                 "pickup" if leg.pod == 1 else "dropoff" if leg.pod == -1 else "rebalancing",
                 leg.rid, leg.tlng, leg.tlat, leg.d, leg.t)
         return str
@@ -307,7 +353,6 @@ class Model(object):
     Attributes:
         T: system time at current state
         D: average arrival interval (sec)
-        demand: demand matrix
         V: number of vehicles
         K: capacity of vehicles
         vehs: the list of vehicles
@@ -315,10 +360,9 @@ class Model(object):
         reqs: the list of requests
         queue: requests in the queue
     """ 
-    def __init__(self, D, demand, V=2, K=4):
+    def __init__(self, D, V=2, K=4):
         self.T = 0.0
         self.D = D
-        self.demand = demand
         self.V = V
         self.K = K
         self.vehs = []
@@ -329,10 +373,10 @@ class Model(object):
         self.queue = deque([])
         
     def generate_request(self, osrm):
-        dt = self.D * np.random.exponential()
+        dt = 3600.0/self.D * np.random.exponential()
         rand = np.random.rand()
-        for d in demand:
-            if d[4] > rand:
+        for d in DEMAND:
+            if d[5] > rand:
                 req = Req(osrm, 
                           0 if self.N == 0 else self.reqs[-1].id+1,
                           dt if self.N == 0 else self.reqs[-1].Tr+dt,
@@ -353,14 +397,14 @@ class Model(object):
         
     def dispatch_at_time(self, osrm, T):
         self.T = T
-        for v in self.vehs:
-            done = v.move_to_time(T)
+        for veh in self.vehs:
+            done = veh.move_to_time(T)
             for (rid, pod, t) in done:
                 if pod == 1:
                     self.reqs[rid].Tp = t
                 elif pod == -1:
                     self.reqs[rid].Td = t
-            v.update_cost()
+            veh.update_cost_after_move(osrm)
         self.generate_requests_to_time(osrm, T)
         print(self)
         self.assign(osrm, T)
@@ -369,81 +413,242 @@ class Model(object):
         l = len(self.queue)
         for i in range(l):
             req = self.queue.popleft()
-            self.insert_heuristics(osrm, req)
             if not self.insert_heuristics(osrm, req):
-                pass
                 # if (req.Clp <= T)
                 #     self.queue.append(req)
+                pass
+        if T >= WARM_UP:
+            self.simulated_annealing(osrm)
         
     def insert_heuristics(self, osrm, req):
-        dc = np.inf
-        v_ = None
-        r_ = None
+        dc_ = np.inf
+        veh_ = None
+        route_ = None
         viol = None
-        for v in self.vehs:
+        for veh in self.vehs:
             route = []
-            for leg in v.route:
+            for leg in veh.route:
                 route.append( (leg.rid, leg.pod, leg.tlng, leg.tlat) )
             l = len(route)
-            c = v.c
+            c = veh.c
             for i in range(l+1):
                 for j in range(i+1, l+2):
                     route.insert(i, (req.id, 1, req.olng, req.olat) )
                     route.insert(j, (req.id, -1, req.dlng, req.dlat) )
-                    flag, dc_, viol = self.test_constraints_get_cost(osrm, route, v, dc)
+                    flag, c_, viol = self.test_constraints_get_cost(osrm, route, veh, req, c+dc_)
                     if flag:
-                        dc = dc_
-                        v_ = v
-                        r_ = copy.deepcopy(route)
-                    elif "late_pickup" in viol or "late_dropoff" in viol or "over_capacity" in viol:
-                        break
+                        dc_ = c_ - c
+                        veh_ = veh
+                        route_ = copy.deepcopy(route)
                     route.pop(j)
                     route.pop(i)
-                if "late_pickup" in viol:
+                    if viol > 0:
+                        break
+                if viol == 2:
                     break
-        if v_ != None:
-            v_.build_route(osrm, r_)
+        if veh_ != None:
+            veh_.build_route(osrm, route_)
+            veh_.update_cost_after_build()
+            print("    Insertion Heuristics: veh %d is assigned to req %d" % (veh_.id, req.id) )
+            return True
+        else:
+            print("    Insertion Heuristics: req %d is rejected!" % (req.id) )
+            return False
+
+    def simulated_annealing(self, osrm):
+        TEMP = 100
+        STEPS = 100
+        ROUNDS = 5
+        success = False
+        base_cost = self.get_total_cost()
+        routes = []
+        for veh in self.vehs:
+            route = []
+            for leg in veh.route:
+                route.append( (leg.rid, leg.pod, leg.tlng, leg.tlat) )
+            routes.append([route, veh.c])
+        best_routes = copy.deepcopy(routes)
+        best_cost = base_cost
+        for i in range(ROUNDS):
+            print("    Simulated Annealing: round %d, max iteration steps = %d" % (i, STEPS))
+            for T in np.linspace(TEMP, 0, STEPS, endpoint=False):
+                v1, r1 = self.get_random_veh_req(routes)
+                v2, r2 = self.get_random_veh_req(routes)
+                # print(v1, r1, v2, r2)
+                if v1 == v2:
+                    continue
+                elif r1 == -1 and r2 == -1:
+                    continue
+                else:
+                    rc1 = copy.deepcopy(routes[v1])
+                    rc2 = copy.deepcopy(routes[v2])
+                    # print(rc1, rc2)
+                    if r1 != -1: 
+                        self.remove_req_from_veh(osrm, rc1, v1, r1)
+                    if r2 != -1: 
+                        self.remove_req_from_veh(osrm, rc2, v2, r2)
+                    if r1 != -1:
+                        if not self.insert_req_to_veh(osrm, rc2, v2, r1):
+                            continue
+                    if r2 != -1:
+                        if not self.insert_req_to_veh(osrm, rc1, v1, r2):
+                            continue
+                    # print(rc1, rc2)
+                    dc = rc1[1] + rc2[1] - routes[v1][1] - routes[v2][1]
+                    if dc < 0 or np.random.rand() < math.exp(-dc/T):
+                        # if r1 != -1 and r2 != -1:
+                        #     print("    SA: swap req %d (veh %d) and req %d (veh %d), dc = %.1f, p = %.3f" % (
+                        #         r1, v1, r2, v2, dc, 1.0 if dc<0 else math.exp(-dc/T)))
+                        # elif r1 != -1:
+                        #     print("    SA: insert req %d (veh %d) to veh %d, dc = %.1f, p = %.3f" % (
+                        #         r1, v1, v2, dc, 1.0 if dc<0 else math.exp(-dc/T)))
+                        # elif r2 != -1:
+                        #     print("    SA: insert req %d (veh %d) to veh %d, dc = %.1f, p = %.3f" % (
+                        #         r2, v2, v1, dc, 1.0 if dc<0 else math.exp(-dc/T)))
+                        routes[v1] = copy.deepcopy(rc1)
+                        routes[v2] = copy.deepcopy(rc2)
+                        cost = self.get_routes_cost(routes)
+                        # print("    SA: round %d, temperature = %.1f, base cost = %.1f, cost = %.1f" % (
+                        #     i, T, base_cost, cost))
+                        if cost < best_cost:
+                            best_routes = copy.deepcopy(routes)
+                            best_cost = cost
+                            success = True
+                            print("    Simulated Annealing: a better solution is found!")
+            routes = copy.deepcopy(best_routes)
+            base_cost = best_cost
+        if success:
+            for veh, route in zip(self.vehs, best_routes):
+                veh.build_route(osrm, route[0])
+                veh.update_cost_after_build()
+                assert np.isclose(veh.c, route[1])
+
+    def get_random_veh_req(self, routes):
+        v = np.random.randint(self.V)
+        n = 0
+        for leg in routes[v][0]:
+            if leg[1] == 1:
+                n += 1
+        if n == 0:
+            return v, -1
+        r = np.random.randint(n+1)
+        if r == n:
+            return v, -1
+        n_ = -1
+        for leg in routes[v][0]:
+            if leg[1] == 1:
+                n_ += 1
+                if n_ == r:
+                    return v, leg[0]
+
+    def remove_req_from_veh(self, osrm, rc, v, r):
+        route_ = rc[0]
+        p = -1
+        d = -1
+        for leg, i in zip(route_, range(len(route_))):
+            if leg[0] == r and leg[1] == 1:
+                p = i
+            elif leg[0] == r and leg[1] == -1:
+                d = i
+        assert p != -1 and d != -1 and p < d
+        route_.pop(p)
+        route_.pop(d-1)
+        c = 0.0
+        t = 0.0
+        veh = self.vehs[v]
+        lng = veh.lng
+        lat = veh.lat
+        n = veh.n
+        for (rid, pod, tlng, tlat) in route_:
+            dt = osrm.get_duration(lng, lat, tlng, tlat)
+            t += dt
+            c += n * dt * COEF_INVEH
+            n += pod
+            assert n <= veh.K
+            c += t * COEF_WAIT if pod == 1 else 0
+            lng = tlng
+            lat = tlat
+        rc[1] = c
+
+
+    def insert_req_to_veh(self, osrm, rc, v, r):
+        veh = self.vehs[v]
+        req = self.reqs[r]
+        c_ = np.inf
+        viol = None
+        route = copy.deepcopy(rc[0])
+        l = len(route)
+        for i in range(l+1):
+            for j in range(i+1, l+2):
+                route.insert(i, (req.id, 1, req.olng, req.olat) )
+                route.insert(j, (req.id, -1, req.dlng, req.dlat) )
+                flag, c, viol = self.test_constraints_get_cost(osrm, route, veh, req, c_)
+                if flag:
+                    c_ = c
+                    route_ = copy.deepcopy(route)
+                route.pop(j)
+                route.pop(i)
+                if viol > 0:
+                    break
+            if viol == 2:
+                break
+        if c_ != np.inf:
+            rc[0] = route_
+            rc[1] = c_
             return True
         else:
             return False
+
+    def get_total_cost(self):
+        c = 0.0
+        for veh in self.vehs:
+            c += veh.c
+        return c
+
+    def get_routes_cost(self, routes):
+        c = 0.0
+        for rc in routes:
+            c += rc[1]
+        return c
     
-    def test_constraints_get_cost(self, osrm, route, v, dc):
-        C = v.c + dc
+    def test_constraints_get_cost(self, osrm, route, veh, req, C):
         c = 0.0
         t = 0.0
-        n = v.n
-        T = v.T
-        K = v.K
-        lng = v.lng
-        lat = v.lat
+        n = veh.n
+        T = veh.T
+        K = veh.K
+        lng = veh.lng
+        lat = veh.lat
+        for (rid, pod, tlng, tlat) in route:
+            n += pod
+            if n > K:
+                return False, None, 1 # over capacity
+        n = veh.n
         for (rid, pod, tlng, tlat) in route:
             dt = osrm.get_duration(lng, lat, tlng, tlat)
             t += dt
             if pod == 1 and T + t > self.reqs[rid].Clp:
-                return False, None, ["late_pickup"]
+                return False, None, 2 if rid == req.id else 0 # late pickup 
             elif pod == -1 and T + t > self.reqs[rid].Cld:
-                return False, None, ["late_dropoff"]
-            c += n * dt * B_V
+                return False, None, 3 if rid == req.id else 0 # late dropoff
+            c += n * dt * COEF_INVEH
             n += pod
-            if n > K:
-                return False, None, ["over_capacity"]
-            c += t * B_W if pod == 1 else 0
+            assert n <= veh.K
+            c += t * COEF_WAIT if pod == 1 else 0
             if c > C:
-                return False, None, ["high_cost"]
+                return False, None, 0
             lng = tlng
             lat = tlat
-        assert c-v.c >= 0
-        return True, c-v.c, []
+        return True, c, -1
     
     def draw(self):
-        for v in self.vehs:
-            v.draw()
-        for r in self.queue:
-            r.draw()
+        for veh in self.vehs:
+            veh.draw()
+        for req in self.queue:
+            req.draw()
         
     def __str__(self):
-        str = "AMoD system: %d vehicles of capacity %d; %.1f trips/h" % (self.V, self.K, 3600/self.D)
-        str += "\n  at t = %.3f, %d requests, in which %d in queue" % ( self.T, self.N-1, len(self.queue) )
+        str = "AMoD system at t = %.3f: %d requests, in which %d in queue" % ( self.T, self.N-1, len(self.queue) )
         # for r in self.queue:
         #     str += "\n" + r.__str__()
         return str
