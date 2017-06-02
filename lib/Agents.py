@@ -54,6 +54,8 @@ class Veh(object):
     Veh is a class for vehicles
     Attributes:
         id: sequential unique id
+        idle: is idle
+        rebl: is rebalancing
         T: system time at current state
         lat: current lngitude
         lng: current longtitude
@@ -70,11 +72,13 @@ class Veh(object):
         Dr: accumulated rebalancing distance traveled
         Tr: accumulated rebalancing time traveled
     """ 
-    def __init__(self, id, K=4, lng=0.080444, lat=51.381263, T=0.0):
+    def __init__(self, id, rs, K=4, lng=0.080444, lat=51.381263, T=0.0):
         self.id = id
+        self.idle = True
+        self.rebl = False
         self.T = T
-        self.lat = lat + np.random.normal(0.0, 0.030)
-        self.lng = lng + np.random.normal(0.0, 0.030) 
+        self.lat = lat + rs.normal(0.0, 0.030)
+        self.lng = lng + rs.normal(0.0, 0.030) 
         self.tlat = lat
         self.tlng = lng
         self.K = K
@@ -99,6 +103,8 @@ class Veh(object):
         self.lat = lat
         
     def build_route(self, osrm, route):
+        if len(route) == 0 and self.rebl:
+            return 
         self.clear_route()
         for (rid, pod, tlng, tlat) in route:
             self.add_leg(osrm, rid, pod, tlng, tlat)
@@ -132,8 +138,14 @@ class Veh(object):
         
     def update_cost_after_move(self, osrm):
         c = 0.0
+        t = 0.0
+        d = 0.0
         if len(self.route) == 0:
+            self.idle = True
+            self.rebl = False
             self.c = c
+            self.t = t
+            self.d = d
             return
         out = osrm.get_routing(self.lng, self.lat, self.route[0].tlng, self.route[0].tlat)
         assert len(out['legs']) == 1
@@ -149,8 +161,6 @@ class Veh(object):
         assert step.geo[0] == step.geo[1]
         self.route.popleft()
         self.route.appendleft(leg)
-        t = 0.0
-        d = 0.0
         n = self.n
         for leg in self.route:
             t += leg.t
@@ -162,9 +172,28 @@ class Veh(object):
         self.c = c
         self.t = t
         self.d = d
+        if self.route[0].rid == -1:
+            self.idle = True
+            self.rebl = True
+            self.c = 0.0
+        else:
+            self.idle = False
+            self.rebl = False 
 
     def update_cost_after_build(self):
         c = 0.0
+        if len(self.route) == 0:
+            self.idle = True
+            self.rebl = False
+            self.c = c
+            return
+        elif self.route[0].rid == -1:
+            self.idle = True
+            self.rebl = True
+            self.c = c
+            return
+        self.idle = False
+        self.rebl = False
         t = 0.0
         n = self.n
         for leg in self.route:
@@ -288,8 +317,8 @@ class Veh(object):
 
                         
     def __str__(self):
-        str =  "veh %d at (%.7f, %.7f) when t = %.3f; occupancy = %d/%d" % (
-            self.id, self.lng, self.lat, self.T, self.n, self.K)
+        str =  "veh %d at (%.7f, %.7f) when t = %.3f; %s; occupancy = %d/%d" % (
+            self.id, self.lng, self.lat, self.T, "rebalancing" if self.rebl else "idle" if self.idle else "in service", self.n, self.K)
         str += "\n  service dist/time: %.1f, %.1f; rebalancing dist/time: %.1f, %.1f" % (
             self.Ds, self.Ts, self.Dr, self.Tr)
         str += "\n  has %d leg(s), dist = %.1f, dura = %.1f，cost = %.1f" % (
@@ -359,22 +388,26 @@ class Model(object):
         N: number of requests
         reqs: the list of requests
         queue: requests in the queue
+        rs1: a seeded random generator for requests
+        rs2: a seeded random generator for vehicle locations
     """ 
     def __init__(self, D, V=2, K=4):
+        self.rs1 = np.random.RandomState(920202)
+        self.rs2 = np.random.RandomState(170606)
         self.T = 0.0
         self.D = D
         self.V = V
         self.K = K
         self.vehs = []
         for i in range(V):
-            self.vehs.append(Veh(i, K=K))
+            self.vehs.append(Veh(i, self.rs2, K=K))
         self.N = 0
         self.reqs = []
         self.queue = deque([])
         
     def generate_request(self, osrm):
-        dt = 3600.0/self.D * np.random.exponential()
-        rand = np.random.rand()
+        dt = 3600.0/self.D * self.rs1.exponential()
+        rand = self.rs1.rand()
         for d in DEMAND:
             if d[5] > rand:
                 req = Req(osrm, 
@@ -382,17 +415,18 @@ class Model(object):
                           dt if self.N == 0 else self.reqs[-1].Tr+dt,
                           d[0], d[1], d[2], d[3])
                 break
-        self.N += 1
         return req
         
     def generate_requests_to_time(self, osrm, T):
         if self.N == 0:
             req = self.generate_request(osrm)
             self.reqs.append(req)
+            self.N += 1
         while self.reqs[-1].Tr <= T:
             req = self.generate_request(osrm)
             self.queue.append(self.reqs[-1])
             self.reqs.append(req)
+            self.N += 1
         assert self.N == len(self.reqs)
         
     def dispatch_at_time(self, osrm, T):
@@ -408,6 +442,8 @@ class Model(object):
         self.generate_requests_to_time(osrm, T)
         print(self)
         self.assign(osrm, T)
+        if IS_RB:
+            self.rebalance(osrm)
         
     def assign(self, osrm, T):
         l = len(self.queue)
@@ -417,8 +453,17 @@ class Model(object):
                 # if (req.Clp <= T)
                 #     self.queue.append(req)
                 pass
-        if T >= WARM_UP:
-            self.simulated_annealing(osrm)
+        if IS_SA:
+            if T >= WARM_UP:
+                self.simulated_annealing(osrm)
+
+    def rebalance(self, osrm):
+        for veh in self.vehs:
+            if veh.idle and len(veh.route) == 0:
+                req = self.generate_request(osrm)
+                route = [(-1, 0, req.olng, req.olat)]
+                veh.build_route(osrm, route)
+                veh.update_cost_after_build()
         
     def insert_heuristics(self, osrm, req):
         dc_ = np.inf
@@ -427,8 +472,11 @@ class Model(object):
         viol = None
         for veh in self.vehs:
             route = []
-            for leg in veh.route:
-                route.append( (leg.rid, leg.pod, leg.tlng, leg.tlat) )
+            if not veh.idle:
+                for leg in veh.route:
+                    route.append( (leg.rid, leg.pod, leg.tlng, leg.tlat) )
+            else:
+                assert veh.c == 0
             l = len(route)
             c = veh.c
             for i in range(l+1):
@@ -458,14 +506,17 @@ class Model(object):
     def simulated_annealing(self, osrm):
         TEMP = 100
         STEPS = 100
-        ROUNDS = 5
+        ROUNDS = 3
         success = False
         base_cost = self.get_total_cost()
         routes = []
         for veh in self.vehs:
             route = []
-            for leg in veh.route:
-                route.append( (leg.rid, leg.pod, leg.tlng, leg.tlat) )
+            if not veh.idle:
+                for leg in veh.route:
+                    route.append( (leg.rid, leg.pod, leg.tlng, leg.tlat) )
+            else:
+                assert veh.c == 0
             routes.append([route, veh.c])
         best_routes = copy.deepcopy(routes)
         best_cost = base_cost
@@ -521,7 +572,8 @@ class Model(object):
             for veh, route in zip(self.vehs, best_routes):
                 veh.build_route(osrm, route[0])
                 veh.update_cost_after_build()
-                assert np.isclose(veh.c, route[1])
+                if not np.isclose(veh.c, route[1]):
+                    pass
 
     def get_random_veh_req(self, routes):
         v = np.random.randint(self.V)
