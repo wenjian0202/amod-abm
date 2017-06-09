@@ -416,6 +416,18 @@ class Model(object):
                           d[0], d[1], d[2], d[3])
                 break
         return req
+
+    def generate_request_random_seed(self, osrm):
+        dt = 3600.0/self.D * np.random.exponential()
+        rand = np.random.rand()
+        for d in DEMAND:
+            if d[5] > rand:
+                req = Req(osrm, 
+                          0 if self.N == 0 else self.reqs[-1].id+1,
+                          dt if self.N == 0 else self.reqs[-1].Tr+dt,
+                          d[0], d[1], d[2], d[3])
+                break
+        return req
         
     def generate_requests_to_time(self, osrm, T):
         if self.N == 0:
@@ -460,7 +472,7 @@ class Model(object):
     def rebalance(self, osrm):
         for veh in self.vehs:
             if veh.idle and len(veh.route) == 0:
-                req = self.generate_request(osrm)
+                req = self.generate_request_random_seed(osrm)
                 route = [(-1, 0, req.olng, req.olat)]
                 veh.build_route(osrm, route)
                 veh.update_cost_after_build()
@@ -506,7 +518,7 @@ class Model(object):
     def simulated_annealing(self, osrm):
         TEMP = 100
         STEPS = 100
-        ROUNDS = 3
+        ROUNDS = 10
         success = False
         base_cost = self.get_total_cost()
         routes = []
