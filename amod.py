@@ -78,60 +78,53 @@ if __name__ == "__main__":
 	osrm = OsrmEngine(exe_loc, map_loc)
 	osrm.start_server()
 
-	INPUTS = [ 
-				[DEMAND4, TOTAL4, "4", 80], 
-				[DEMAND4, TOTAL4, "4", 100],
-				[DEMAND4, TOTAL4, "4", 120],
-				[DEMAND35, TOTAL35, "35", 100],
-				[DEMAND35, TOTAL35, "35", 120],
-				[DEMAND35, TOTAL35, "35", 140]]
-	for DEMAND, TOTAL_DEMAND, DEMAND_STR, FLEET_SIZE in INPUTS:
+	for ii in range(10):
 		now = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M")
-		f1 = open("%s_D%s_V%d_K%d_SA%d_RB%d_reqs" % (now, DEMAND_STR, FLEET_SIZE, CAPACITY, 1 if IS_SA else 0, 1 if IS_RB else 0), 'w')
-		f2 = open("%s_D%s_V%d_K%d_SA%d_RB%d_vehs" % (now, DEMAND_STR, FLEET_SIZE, CAPACITY, 1 if IS_SA else 0, 1 if IS_RB else 0), 'w')
-		w1 = csv.writer(f1)
-		w2 = csv.writer(f2)
+		# f1 = open("%s_D%s_V%d_K%d_SA%d_RB%d_reqs" % (now, DEMAND_STR, FLEET_SIZE, CAPACITY, 1 if IS_SA else 0, 1 if IS_RB else 0), 'w')
+		# f2 = open("%s_D%s_V%d_K%d_SA%d_RB%d_vehs" % (now, DEMAND_STR, FLEET_SIZE, CAPACITY, 1 if IS_SA else 0, 1 if IS_RB else 0), 'w')
+		# w1 = csv.writer(f1)
+		# w2 = csv.writer(f2)
 
 		model = Model(TOTAL_DEMAND * DEMAND_SCALER, V=FLEET_SIZE, K=CAPACITY)
 
 		stime = time.time()
 		for T in range(0,WARM_UP+SIMULATION+WRAP_UP,INTERVAL):
 			model.dispatch_at_time(osrm, T)
-			if T >= WARM_UP and T <= WARM_UP+SIMULATION:
-				w2.writerow([T])
-				lats = []
-				lngs = []
-				idles = []
-				rebls = []
-				Dss = []
-				Tss = []
-				Drs = []
-				Trs = []
-				for veh in model.vehs:
-					lats.append(veh.lat)
-					lngs.append(veh.lng)
-					idles.append(veh.idle)
-					rebls.append(veh.rebl)
-					Dss.append(veh.Ds)
-					Tss.append(veh.Ts)
-					Drs.append(veh.Dr)
-					Trs.append(veh.Tr)
-				w2.writerow(lats)
-				w2.writerow(lngs)
-				w2.writerow(idles)
-				w2.writerow(rebls)
-				w2.writerow(Dss)
-				w2.writerow(Tss)
-				w2.writerow(Drs)
-				w2.writerow(Trs)
+			# if T >= WARM_UP and T <= WARM_UP+SIMULATION:
+			# 	w2.writerow([T])
+			# 	lats = []
+			# 	lngs = []
+			# 	idles = []
+			# 	rebls = []
+			# 	Dss = []
+			# 	Tss = []
+			# 	Drs = []
+			# 	Trs = []
+			# 	for veh in model.vehs:
+			# 		lats.append(veh.lat)
+			# 		lngs.append(veh.lng)
+			# 		idles.append(veh.idle)
+			# 		rebls.append(veh.rebl)
+			# 		Dss.append(veh.Ds)
+			# 		Tss.append(veh.Ts)
+			# 		Drs.append(veh.Dr)
+			# 		Trs.append(veh.Tr)
+			# 	w2.writerow(lats)
+			# 	w2.writerow(lngs)
+			# 	w2.writerow(idles)
+			# 	w2.writerow(rebls)
+			# 	w2.writerow(Dss)
+			# 	w2.writerow(Tss)
+			# 	w2.writerow(Drs)
+			# 	w2.writerow(Trs)
 		etime = time.time()
 		runtime = etime - stime
 
-		for req in model.reqs:
-			if req.Tr >= WARM_UP and req.Tr <= WARM_UP+SIMULATION:
-				w1.writerow([req.id, req.olat, req.olng, req.dlat, req.dlng, req.Tr, req.Tp, req.Td])
+		# for req in model.reqs:
+		# 	if req.Tr >= WARM_UP and req.Tr <= WARM_UP+SIMULATION:
+		# 		w1.writerow([req.id, req.olat, req.olng, req.dlat, req.dlng, req.Tr, req.Tp, req.Td])
 
 		print_results(model, runtime, now)
 
-		f1.close()
-		f2.close()
+		# f1.close()
+		# f2.close()
