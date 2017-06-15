@@ -18,13 +18,13 @@ from lib.Agents import *
 from lib.Demand import *
 from lib.Constants import *
 
-FLEET_SIZE = 40
+FLEET_SIZE = 20
 CAPACITY = 4
 
 DEMAND_SCALER = 1
-DEMAND = DEMAND5
-TOTAL_DEMAND = TOTAL5
-DEMAND_STR = "ASC5"
+DEMAND = DEMAND35_IZ
+TOTAL_DEMAND = TOTAL35_IZ
+DEMAND_STR = "ASC35_IZ"
 
 def print_results(model, runtime, now):
 	count_reqs = 0
@@ -183,10 +183,13 @@ if __name__ == "__main__":
 	exe_loc = './osrm-backend-5.6.0/build/osrm-routed'
 	map_loc = './osrm-backend-5.6.0/greater-london-latest.osrm'
 
-	osrm = OsrmEngine(exe_loc, map_loc)
-	osrm.start_server()
-	osrm = OsrmEngine(exe_loc, map_loc)
-	osrm.start_server()
+	if DIRECT:
+		osrm = None
+	else:
+		osrm = OsrmEngine(exe_loc, map_loc)
+		osrm.start_server()
+		osrm = OsrmEngine(exe_loc, map_loc)
+		osrm.start_server()
 
 	for ii in range(1):
 		shots = []

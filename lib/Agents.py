@@ -62,6 +62,7 @@ class Veh(object):
         tlat: target (end of route) lngitude
         tlng: target (end of route) longtitude
         K: capacity
+        S: speed (m/s)
         n: number of passengers on board
         route: a list of legs
         t: total duration of the route
@@ -72,7 +73,7 @@ class Veh(object):
         Dr: accumulated rebalancing distance traveled
         Tr: accumulated rebalancing time traveled
     """ 
-    def __init__(self, id, rs, K=4, lng=0.080444, lat=51.381263, T=0.0):
+    def __init__(self, id, rs, K=4, S=6, lng=0.080444, lat=51.381263, T=0.0):
         self.id = id
         self.idle = True
         self.rebl = False
@@ -82,6 +83,7 @@ class Veh(object):
         self.tlat = lat
         self.tlng = lng
         self.K = K
+        self.S = S
         self.n = 0
         self.route = deque([])
         self.t = 0.0
@@ -101,6 +103,9 @@ class Veh(object):
     def jump_to_location(self, lng, lat):
         self.lng = lng
         self.lat = lat
+
+    def get_direct_distance(self, lng1, lat1, lng2, lat2):
+        return np.sqrt( (111317 * (lat1-lat2))**2 + (69600 * (lng1-lng2))**2 )
         
     def build_route(self, osrm, route):
         if len(route) == 0 and self.rebl:
@@ -118,19 +123,26 @@ class Veh(object):
         self.tlat = self.lat
     
     def add_leg(self, osrm, rid, pod, tlng, tlat):
-        out = osrm.get_routing(self.tlng, self.tlat, tlng, tlat)
-        assert len(out['legs']) == 1
-        leg = Leg(rid, pod, tlng, tlat, 
-                  out['legs'][0]['distance'], out['legs'][0]['duration'], steps=[])
-        t_leg = 0.0
-        for s in out['legs'][0]['steps']:
-            step = Step(s['distance'], s['duration'], s['geometry']['coordinates'])
-            t_leg += s['duration']
-            leg.steps.append(step)
-        assert np.isclose(t_leg, leg.t)
-        assert len(step.geo) == 2
-        assert step.geo[0] == step.geo[1]
-        self.route.append(leg)
+        if DIRECT:
+            dis = self.get_direct_distance(self.tlng, self.tlat, tlng, tlat)
+            dur = dis / self.S
+            leg = Leg(rid, pod, tlng, tlat, dis, dur, steps=[])
+            leg.steps.append(Step(dis, dur, [[self.tlng, self.tlat],[tlng, tlat]]))
+            self.route.append(leg)
+        else:
+            out = osrm.get_routing(self.tlng, self.tlat, tlng, tlat)
+            assert len(out['legs']) == 1
+            leg = Leg(rid, pod, tlng, tlat, 
+                      out['legs'][0]['distance'], out['legs'][0]['duration'], steps=[])
+            t_leg = 0.0
+            for s in out['legs'][0]['steps']:
+                step = Step(s['distance'], s['duration'], s['geometry']['coordinates'])
+                t_leg += s['duration']
+                leg.steps.append(step)
+            assert np.isclose(t_leg, leg.t)
+            assert len(step.geo) == 2
+            assert step.geo[0] == step.geo[1]
+            self.route.append(leg)
         self.tlng = leg.steps[-1].geo[1][0]
         self.tlat = leg.steps[-1].geo[1][1]
         self.d += leg.d
@@ -147,20 +159,23 @@ class Veh(object):
             self.t = t
             self.d = d
             return
-        out = osrm.get_routing(self.lng, self.lat, self.route[0].tlng, self.route[0].tlat)
-        assert len(out['legs']) == 1
-        leg = Leg(self.route[0].rid, self.route[0].pod, self.route[0].tlng, self.route[0].tlat, 
-                  out['legs'][0]['distance'], out['legs'][0]['duration'], steps=[])
-        t_leg = 0.0
-        for s in out['legs'][0]['steps']:
-            step = Step(s['distance'], s['duration'], s['geometry']['coordinates'])
-            t_leg += s['duration']
-            leg.steps.append(step)
-        assert np.isclose(t_leg, leg.t)
-        assert len(step.geo) == 2
-        assert step.geo[0] == step.geo[1]
-        self.route.popleft()
-        self.route.appendleft(leg)
+        if DIRECT:
+            pass
+        else:
+            out = osrm.get_routing(self.lng, self.lat, self.route[0].tlng, self.route[0].tlat)
+            assert len(out['legs']) == 1
+            leg = Leg(self.route[0].rid, self.route[0].pod, self.route[0].tlng, self.route[0].tlat, 
+                      out['legs'][0]['distance'], out['legs'][0]['duration'], steps=[])
+            t_leg = 0.0
+            for s in out['legs'][0]['steps']:
+                step = Step(s['distance'], s['duration'], s['geometry']['coordinates'])
+                t_leg += s['duration']
+                leg.steps.append(step)
+            assert np.isclose(t_leg, leg.t)
+            assert len(step.geo) == 2
+            assert step.geo[0] == step.geo[1]
+            self.route.popleft()
+            self.route.appendleft(leg)
         n = self.n
         for leg in self.route:
             t += leg.t
@@ -362,9 +377,13 @@ class Req(object):
         self.olat = olat
         self.olng = olng
         self.dlat = dlat
-        self.dlng = dlng
-        self.Clp = Tr + MAX_WAIT
-        self.Cld = self.Clp + MAX_DETOUR * osrm.get_duration(olng, olat, dlng, dlat)
+        self.dlng = dlng 
+        if DIRECT:
+            self.Clp = np.inf
+            self.Cld = np.inf
+        else:
+            self.Clp = Tr + MAX_WAIT
+            self.Cld = self.Clp + MAX_DETOUR * osrm.get_duration(olng, olat, dlng, dlat)
         self.Tp = -1.0
         self.Td = -1.0
     
@@ -701,7 +720,11 @@ class Model(object):
                 return False, None, 1 # over capacity
         n = veh.n
         for (rid, pod, tlng, tlat) in route:
-            dt = osrm.get_duration(lng, lat, tlng, tlat)
+            dt = 0
+            if DIRECT:
+                dt = veh.get_direct_distance(lng, lat, tlng, tlat) / veh.S
+            else:
+                dt = osrm.get_duration(lng, lat, tlng, tlat)
             t += dt
             if pod == 1 and T + t > self.reqs[rid].Clp:
                 return False, None, 2 if rid == req.id else 0 # late pickup 
