@@ -305,15 +305,26 @@ class Veh(object):
         self.route[0].steps[0].d -= step.d * pct  
     
     def draw(self):
-        plt.plot(self.lng, self.lat, 'b', marker='o')
+        color = "0.50"
+        if self.id == 0:
+            color = "red"
+        elif self.id == 1:
+            color = "orange"
+        elif self.id == 2:
+            color = "yellow"
+        elif self.id == 3:
+            color = "green"
+        elif self.id == 4:
+            color = "blue"
+        plt.plot(self.lng, self.lat, color=color, marker='o', markersize=4, alpha=0.5)
         count = 0
         for leg in self.route:
             count += 1
-            plt.plot(leg.tlng, leg.tlat, 'b', 
-                     marker='+' if leg.pod == 1 else 'x' if leg.pod == -1 else '.')
+            plt.plot(leg.tlng, leg.tlat, color=color, 
+                     marker='s' if leg.pod == 1 else 'x' if leg.pod == -1 else None, markersize=3, alpha=0.5)
             for step in leg.steps:
                 geo = np.transpose( step.geo )
-                plt.plot(geo[0], geo[1], 'b', linestyle='-' if count<=1 else '--')
+                plt.plot(geo[0], geo[1], color=color, linestyle='-' if count<=1 else '--', alpha=0.5)
 
                         
     def __str__(self):
@@ -381,7 +392,8 @@ class Model(object):
     Model is the class for the AMoD system
     Attributes:
         T: system time at current state
-        D: average arrival interval (sec)
+        DEMAND: demand matrix
+        D: arrival rate (trips/hour)
         V: number of vehicles
         K: capacity of vehicles
         vehs: the list of vehicles
@@ -391,10 +403,11 @@ class Model(object):
         rs1: a seeded random generator for requests
         rs2: a seeded random generator for vehicle locations
     """ 
-    def __init__(self, D, V=2, K=4):
+    def __init__(self, DEMAND, D, V=2, K=4):
         self.rs1 = np.random.RandomState(920202)
         self.rs2 = np.random.RandomState(170606)
         self.T = 0.0
+        self.DEMAND = DEMAND
         self.D = D
         self.V = V
         self.K = K
@@ -403,12 +416,13 @@ class Model(object):
             self.vehs.append(Veh(i, self.rs2, K=K))
         self.N = 0
         self.reqs = []
+        self.rejs = []
         self.queue = deque([])
         
     def generate_request(self, osrm):
         dt = 3600.0/self.D * self.rs1.exponential()
         rand = self.rs1.rand()
-        for d in DEMAND:
+        for d in self.DEMAND:
             if d[5] > rand:
                 req = Req(osrm, 
                           0 if self.N == 0 else self.reqs[-1].id+1,
@@ -420,7 +434,7 @@ class Model(object):
     def generate_request_random_seed(self, osrm):
         dt = 3600.0/self.D * np.random.exponential()
         rand = np.random.rand()
-        for d in DEMAND:
+        for d in self.DEMAND:
             if d[5] > rand:
                 req = Req(osrm, 
                           0 if self.N == 0 else self.reqs[-1].id+1,
@@ -462,9 +476,7 @@ class Model(object):
         for i in range(l):
             req = self.queue.popleft()
             if not self.insert_heuristics(osrm, req):
-                # if (req.Clp <= T)
-                #     self.queue.append(req)
-                pass
+                self.rejs.append(req)
         if IS_SA:
             if T >= WARM_UP:
                 self.simulated_annealing(osrm)
@@ -706,10 +718,14 @@ class Model(object):
         return True, c, -1
     
     def draw(self):
-        for veh in self.vehs:
+        fig = plt.figure(figsize=(5,6))
+        plt.xlim((-0.02,0.18))
+        plt.ylim((51.29,51.44))
+        for veh in reversed(self.vehs):
             veh.draw()
         for req in self.queue:
             req.draw()
+        plt.show()
         
     def __str__(self):
         str = "AMoD system at t = %.3f: %d requests, in which %d in queue" % ( self.T, self.N-1, len(self.queue) )
