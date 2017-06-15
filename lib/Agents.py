@@ -568,10 +568,25 @@ class Model(object):
                 self.simulated_annealing(osrm)
 
     def rebalance_sar(self, osrm):
+        W = 5
+        N = 10
+        E = W/N
+        d = np.zeros((N,N))
+        for dmd in self.DEMAND:
+            for i,j in itertools.product(range(N), range(N)):
+                if dmd[1] >= W/2 - (i+1)*E:
+                    if dmd[0] <= -W/2 + (j+1)*E:
+                        d[i][j] += dmd[4] * self.D
+                        break
         for veh in self.vehs:
             if veh.idle and len(veh.route) == 0:
-                req = self.generate_request_random_seed(osrm)
-                route = [(-1, 0, req.olng, req.olat)]
+                n = np.random.uniform(0, self.D)
+                m = 0
+                for i,j in itertools.product(range(N), range(N)):
+                    m += d[i][j]
+                    if m > n:
+                        break
+                route = [(-1, 0, -W/2 + (j+0.5)*E, W/2 - (i+0.5)*E)]
                 veh.build_route(osrm, route)
                 veh.update_cost_after_build()
 
