@@ -22,9 +22,9 @@ FLEET_SIZE = 20
 CAPACITY = 4
 
 DEMAND_SCALER = 100
-DEMAND = FM5
+DEMAND = BAL5
 TOTAL_DEMAND = 1
-DEMAND_STR = "FM5"
+DEMAND_STR = "BAL5"
 
 def print_results(model, runtime, now):
 	count_reqs = 0
@@ -208,12 +208,13 @@ if __name__ == "__main__":
 		stime = time.time()
 		for T in range(0, WARM_UP+SIMULATION+WRAP_UP,ASSIGN_INT):
 			model.dispatch_at_time(osrm, T)
-			# shots.append(copy.deepcopy(model.vehs))
+			shots.append(copy.deepcopy(model.vehs))
 		etime = time.time()
 		runtime = etime - stime
 
-		# anime = anim(shots)
-		# anime.save('test.mp4', dpi=300, fps=None, extra_args=['-vcodec', 'libx264'])
-		# plt.show()
+		anime = anim(shots)
+		anime.save('test.mp4', dpi=300, fps=None, extra_args=['-vcodec', 'libx264'])
+		plt.show()
 
 		print_results(model, runtime, now)
+

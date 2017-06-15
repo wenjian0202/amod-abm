@@ -3,6 +3,7 @@ import copy
 import math
 from collections import deque
 import matplotlib.pyplot as plt
+import itertools
 
 from lib.Demand import *
 from lib.Constants import *
@@ -113,7 +114,7 @@ class Veh(object):
         return np.sqrt( (1000 * (lat1-lat2))**2 + (1000 * (lng1-lng2))**2 )
         
     def build_route(self, osrm, route):
-        if len(route) == 0 and self.rebl:
+        if len(route) == 0:
             return 
         self.clear_route()
         for (rid, pod, tlng, tlat) in route:
@@ -283,6 +284,46 @@ class Veh(object):
         self.d = 0.0
         self.t = 0.0
         return done
+
+    def get_location_at_time(self, T):
+        dT = T - self.T
+        if dT <= 0:
+            return self.lng, self.lat, self.n
+        lng = self.lng
+        lat = self.lat
+        n = self.n
+        route = copy.deepcopy(self.route)
+        while dT > 0 and len(route) > 0:
+            leg = route[0]
+            if leg.t < dT:
+                dT -= leg.t
+                lng = leg.tlng
+                lat = leg.tlat
+                n += leg.pod
+                route.popleft()
+            else:
+                while dT > 0 and len(leg.steps) > 0:
+                    step = leg.steps[0]
+                    if step.t < dT:
+                        dT -= step.t
+                        leg.popleft()
+                        if len(leg.steps) == 0:
+                            # corner case: leg.t extremely small, but still larger than dT
+                            lng = leg.tlng
+                            lat = leg.tlat
+                            n += leg.pod
+                            route.popleft()
+                            break
+                    else:
+                        pct = dT / step.t
+                        self.cut_fake_step(step, pct)
+                        lng = step.geo[0][0]
+                        lat = step.geo[0][1]
+                        return lng, lat, n
+        assert dT > 0 or np.isclose(dT, 0.0)
+        assert len(route) == 0 
+        assert n == 0
+        return lng, lat, n
         
     def pop_leg(self):
         leg = self.route.popleft()
@@ -323,6 +364,27 @@ class Veh(object):
         self.route[0].d -= step.d * pct
         self.route[0].steps[0].t -= step.t * pct
         self.route[0].steps[0].d -= step.d * pct  
+
+    def cut_fake_step(self, step, pct):
+        dis = 0.0
+        sega = step.geo[0]
+        for segb in step.geo[1:]:
+            dis += np.sqrt( (sega[0] - segb[0])**2 + (sega[1] - segb[1])**2)
+            sega = segb
+        dis_ = 0.0
+        _dis = 0.0
+        sega = step.geo[0]
+        for segb in step.geo[1:]:
+            _dis = np.sqrt( (sega[0] - segb[0])**2 + (sega[1] - segb[1])**2)
+            dis_ += _dis
+            if dis_ / dis > pct:
+                break
+            sega = segb
+        while step.geo[0] != sega:
+            step.geo.pop(0)
+        _pct = (pct * dis - dis_ + _dis) / _dis       
+        step.geo[0][0] = sega[0] + _pct * (segb[0] - sega[0])
+        step.geo[0][1] = sega[1] + _pct * (segb[1] - sega[1])     
     
     def draw(self):
         color = "0.50"
@@ -492,6 +554,8 @@ class Model(object):
         if T % REBL_INT == 0:
             if REBALANCE == "sar":
                 self.rebalance_sar(osrm)
+            elif REBALANCE == "orp":
+                self.rebalance_orp(osrm, T)    
         
     def assign(self, osrm, T):
         l = len(self.queue)
@@ -510,6 +574,89 @@ class Model(object):
                 route = [(-1, 0, req.olng, req.olat)]
                 veh.build_route(osrm, route)
                 veh.update_cost_after_build()
+
+    def rebalance_orp(self, osrm, T):
+        W = 5
+        N = 10
+        E = W/N
+        d = np.zeros((N,N))
+        v = np.zeros((N,N))
+        s = np.zeros((N,N))
+        b = np.zeros((N,N))
+        for dmd in self.DEMAND:
+            for i,j in itertools.product(range(N), range(N)):
+                if dmd[1] >= W/2 - (i+1)*E:
+                    if dmd[0] <= -W/2 + (j+1)*E:
+                        d[i][j] += dmd[4] * self.D
+                        break
+        for veh in self.vehs:
+            if veh.idle:
+                veh.clear_route()
+                veh.rebl = False
+                for i,j in itertools.product(range(N), range(N)):
+                    if veh.lat >= W/2 - (i+1)*E:
+                        if veh.lng <= -W/2 + (j+1)*E:
+                            v[i][j] += 1
+                            break
+            else:
+                lng, lat, n = veh.get_location_at_time(T+REBL_INT)
+                for i,j in itertools.product(range(N), range(N)):
+                    if lat >= W/2 - (i+1)*E:
+                        if lng <= -W/2 + (j+1)*E:
+                            if n == 0:
+                                s[i][j] += 0.8
+                            elif n == 1:
+                                s[i][j] += 0.4
+                            elif n == 2:
+                                s[i][j] += 0.2
+                            elif n == 3:
+                                s[i][j] += 0.1
+                            else:
+                                s[i][j] += 0.0
+                            break
+        for i,j in itertools.product(range(N), range(N)):
+            if d[i][j] == 0:
+                continue
+            lamda = d[i][j] * REBL_INT/3600
+            k = 0
+            p = 0.0
+            while k <= s[i][j]:
+                p += np.exp(-lamda) * (lamda**k) / np.math.factorial(k)
+                k += 1
+            b[i][j] = 1 - p
+        while np.sum(v) != 0:
+            i, j = np.unravel_index(b.argmax(), b.shape)
+            dis = np.inf
+            vid = None
+            for vid_, veh in enumerate(self.vehs):
+                if veh.idle and not veh.rebl:
+                    if DIRECT:
+                        dis_ = veh.get_direct_distance(veh.lng, veh.lat, -W/2 + (j+0.5)*E, W/2 - (i+0.5)*E)
+                        if dis_ < dis:
+                            dis = dis_
+                            vid = vid_
+                    else:
+                        assert False
+            route = [(-1, 0, -W/2 + (j+0.5)*E, W/2 - (i+0.5)*E)]
+            self.vehs[vid].build_route(osrm, route)
+            self.vehs[vid].update_cost_after_build()
+            for i_, j_ in itertools.product(range(N), range(N)):
+                if self.vehs[vid].lat >= W/2 - (i_+1)*E:
+                    if self.vehs[vid].lng <= -W/2 + (j_+1)*E:
+                        v[i_][j_] -= 1
+                        break
+            s[i][j] += 1
+            if d[i][j] == 0:
+                continue
+            lamda = d[i][j] * REBL_INT/3600
+            k = 0
+            p = 0.0
+            while k <= s[i][j]:
+                p += np.exp(-lamda) * (lamda**k) / np.math.factorial(k)
+                k += 1
+            b[i][j] = 1 - p
+        assert np.sum(v) == 0
+        assert np.min(v) == 0
         
     def insert_heuristics(self, osrm, req):
         dc_ = np.inf
