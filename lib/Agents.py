@@ -78,8 +78,12 @@ class Veh(object):
         self.idle = True
         self.rebl = False
         self.T = T
-        self.lat = lat + rs.normal(0.0, 0.030)
-        self.lng = lng + rs.normal(0.0, 0.030) 
+        if DIRECT:
+            self.lat = rs.uniform(-2.5, 2.5)
+            self.lng = rs.uniform(-2.5, 2.5)
+        else:
+            self.lat = lat + rs.normal(0.0, 0.030)
+            self.lng = lng + rs.normal(0.0, 0.030) 
         self.tlat = lat
         self.tlng = lng
         self.K = K
@@ -105,7 +109,8 @@ class Veh(object):
         self.lat = lat
 
     def get_direct_distance(self, lng1, lat1, lng2, lat2):
-        return np.sqrt( (111317 * (lat1-lat2))**2 + (69600 * (lng1-lng2))**2 )
+        # return np.sqrt( (111317 * (lat1-lat2))**2 + (69600 * (lng1-lng2))**2 )
+        return np.sqrt( (1000 * (lat1-lat2))**2 + (1000 * (lng1-lng2))**2 )
         
     def build_route(self, osrm, route):
         if len(route) == 0 and self.rebl:
@@ -455,10 +460,7 @@ class Model(object):
         rand = np.random.rand()
         for d in self.DEMAND:
             if d[5] > rand:
-                req = Req(osrm, 
-                          0 if self.N == 0 else self.reqs[-1].id+1,
-                          dt if self.N == 0 else self.reqs[-1].Tr+dt,
-                          d[0], d[1], d[2], d[3])
+                req = Req(osrm, -1, -1, d[0], d[1], d[2], d[3])
                 break
         return req
         
@@ -487,8 +489,9 @@ class Model(object):
         self.generate_requests_to_time(osrm, T)
         print(self)
         self.assign(osrm, T)
-        if IS_RB:
-            self.rebalance(osrm)
+        if T % REBL_INT == 0:
+            if REBALANCE == "sar":
+                self.rebalance_sar(osrm)
         
     def assign(self, osrm, T):
         l = len(self.queue)
@@ -496,11 +499,11 @@ class Model(object):
             req = self.queue.popleft()
             if not self.insert_heuristics(osrm, req):
                 self.rejs.append(req)
-        if IS_SA:
+        if SIMU_ANNEAL == "yes":
             if T >= WARM_UP:
                 self.simulated_annealing(osrm)
 
-    def rebalance(self, osrm):
+    def rebalance_sar(self, osrm):
         for veh in self.vehs:
             if veh.idle and len(veh.route) == 0:
                 req = self.generate_request_random_seed(osrm)
