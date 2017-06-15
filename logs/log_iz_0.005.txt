@@ -1,0 +1,655 @@
+Scenario: 35; Simulated Annealing: no; Rebalancing: no
+Simulation starts at 2017-06-06_12:20
+Runtime Time: 232 s
+System Settings:
+  - Simulation Time: 3600 s
+  - Fleet Size: 30; Capacity: 4
+  - Demand Rate: 202.9 trips/h
+  - Dispatching Interval: 30.0 s
+Simulation Results:
+  - Requests:
+    + service rate: 99.0% (196/198)
+    + wait time: 238.7 s
+    + in-vehicle time: 309.5 s
+  - Vehicles:
+    + vehicle service time travelled: 2503.1 s
+    + vehicle service distance travelled: 21546.5 m
+    + vehicle service time percentage: 69.5%
+    + vehicle rebalancing time travelled: 0.0 s
+    + vehicle rebalancing distance travelled: 0.0 m
+    + vehicle rebalancing time percentage: 0.0%
+
+
+
+Scenario: 35; Simulated Annealing: yes; Rebalancing: no
+Simulation starts at 2017-06-06_12:35
+Runtime Time: 1369 s
+System Settings:
+  - Simulation Time: 3600 s
+  - Fleet Size: 30; Capacity: 4
+  - Demand Rate: 202.9 trips/h
+  - Dispatching Interval: 30.0 s
+Simulation Results:
+  - Requests:
+    + service rate: 99.0% (196/198)
+    + wait time: 230.6 s
+    + in-vehicle time: 302.7 s
+  - Vehicles:
+    + vehicle service time travelled: 2491.4 s
+    + vehicle service distance travelled: 21470.3 m
+    + vehicle service time percentage: 69.2%
+    + vehicle rebalancing time travelled: 0.0 s
+    + vehicle rebalancing distance travelled: 0.0 m
+    + vehicle rebalancing time percentage: 0.0%
+
+Scenario: 35; Simulated Annealing: yes; Rebalancing: no
+Simulation starts at 2017-06-06_12:58
+Runtime Time: 1319 s
+System Settings:
+  - Simulation Time: 3600 s
+  - Fleet Size: 30; Capacity: 4
+  - Demand Rate: 202.9 trips/h
+  - Dispatching Interval: 30.0 s
+Simulation Results:
+  - Requests:
+    + service rate: 98.5% (195/198)
+    + wait time: 220.4 s
+    + in-vehicle time: 303.6 s
+  - Vehicles:
+    + vehicle service time travelled: 2496.9 s
+    + vehicle service distance travelled: 21378.8 m
+    + vehicle service time percentage: 69.4%
+    + vehicle rebalancing time travelled: 0.0 s
+    + vehicle rebalancing distance travelled: 0.0 m
+    + vehicle rebalancing time percentage: 0.0%
+
+cenario: 35; Simulated Annealing: yes; Rebalancing: no
+Simulation starts at 2017-06-06_13:20
+Runtime Time: 1372 s
+System Settings:
+  - Simulation Time: 3600 s
+  - Fleet Size: 30; Capacity: 4
+  - Demand Rate: 202.9 trips/h
+  - Dispatching Interval: 30.0 s
+Simulation Results:
+  - Requests:
+    + service rate: 98.5% (195/198)
+    + wait time: 222.2 s
+    + in-vehicle time: 311.9 s
+  - Vehicles:
+    + vehicle service time travelled: 2463.8 s
+    + vehicle service distance travelled: 21120.6 m
+    + vehicle service time percentage: 68.4%
+    + vehicle rebalancing time travelled: 0.0 s
+    + vehicle rebalancing distance travelled: 0.0 m
+    + vehicle rebalancing time percentage: 0.0%
+
+Scenario: 35; Simulated Annealing: yes; Rebalancing: no
+Simulation starts at 2017-06-06_13:42
+Runtime Time: 1364 s
+System Settings:
+  - Simulation Time: 3600 s
+  - Fleet Size: 30; Capacity: 4
+  - Demand Rate: 202.9 trips/h
+  - Dispatching Interval: 30.0 s
+Simulation Results:
+  - Requests:
+    + service rate: 98.5% (195/198)
+    + wait time: 231.0 s
+    + in-vehicle time: 300.2 s
+  - Vehicles:
+    + vehicle service time travelled: 2485.8 s
+    + vehicle service distance travelled: 21302.4 m
+    + vehicle service time percentage: 69.0%
+    + vehicle rebalancing time travelled: 0.0 s
+    + vehicle rebalancing distance travelled: 0.0 m
+    + vehicle rebalancing time percentage: 0.0%
+
+Scenario: 35; Simulated Annealing: yes; Rebalancing: no
+Simulation starts at 2017-06-06_14:05
+Runtime Time: 1393 s
+System Settings:
+  - Simulation Time: 3600 s
+  - Fleet Size: 30; Capacity: 4
+  - Demand Rate: 202.9 trips/h
+  - Dispatching Interval: 30.0 s
+Simulation Results:
+  - Requests:
+    + service rate: 99.0% (196/198)
+    + wait time: 230.7 s
+    + in-vehicle time: 309.0 s
+  - Vehicles:
+    + vehicle service time travelled: 2500.5 s
+    + vehicle service distance travelled: 21405.8 m
+    + vehicle service time percentage: 69.5%
+    + vehicle rebalancing time travelled: 0.0 s
+    + vehicle rebalancing distance travelled: 0.0 m
+    + vehicle rebalancing time percentage: 0.0%
+
+Scenario: 35; Simulated Annealing: yes; Rebalancing: no
+Simulation starts at 2017-06-06_14:28
+Runtime Time: 1405 s
+System Settings:
+  - Simulation Time: 3600 s
+  - Fleet Size: 30; Capacity: 4
+  - Demand Rate: 202.9 trips/h
+  - Dispatching Interval: 30.0 s
+Simulation Results:
+  - Requests:
+    + service rate: 99.0% (196/198)
+    + wait time: 223.9 s
+    + in-vehicle time: 306.9 s
+  - Vehicles:
+    + vehicle service time travelled: 2453.3 s
+    + vehicle service distance travelled: 20973.4 m
+    + vehicle service time percentage: 68.1%
+    + vehicle rebalancing time travelled: 0.0 s
+    + vehicle rebalancing distance travelled: 0.0 m
+    + vehicle rebalancing time percentage: 0.0%
+
+Scenario: 35; Simulated Annealing: yes; Rebalancing: no
+Simulation starts at 2017-06-06_14:52
+Runtime Time: 1362 s
+System Settings:
+  - Simulation Time: 3600 s
+  - Fleet Size: 30; Capacity: 4
+  - Demand Rate: 202.9 trips/h
+  - Dispatching Interval: 30.0 s
+Simulation Results:
+  - Requests:
+    + service rate: 98.5% (195/198)
+    + wait time: 225.9 s
+    + in-vehicle time: 307.2 s
+  - Vehicles:
+    + vehicle service time travelled: 2456.7 s
+    + vehicle service distance travelled: 21005.3 m
+    + vehicle service time percentage: 68.2%
+    + vehicle rebalancing time travelled: 0.0 s
+    + vehicle rebalancing distance travelled: 0.0 m
+    + vehicle rebalancing time percentage: 0.0%
+
+Scenario: 35; Simulated Annealing: yes; Rebalancing: no
+Simulation starts at 2017-06-06_15:15
+Runtime Time: 1280 s
+System Settings:
+  - Simulation Time: 3600 s
+  - Fleet Size: 30; Capacity: 4
+  - Demand Rate: 202.9 trips/h
+  - Dispatching Interval: 30.0 s
+Simulation Results:
+  - Requests:
+    + service rate: 99.0% (196/198)
+    + wait time: 218.9 s
+    + in-vehicle time: 310.3 s
+  - Vehicles:
+    + vehicle service time travelled: 2451.2 s
+    + vehicle service distance travelled: 20966.7 m
+    + vehicle service time percentage: 68.1%
+    + vehicle rebalancing time travelled: 0.0 s
+    + vehicle rebalancing distance travelled: 0.0 m
+    + vehicle rebalancing time percentage: 0.0%
+
+Scenario: 35; Simulated Annealing: yes; Rebalancing: no
+Simulation starts at 2017-06-06_15:36
+Runtime Time: 1294 s
+System Settings:
+  - Simulation Time: 3600 s
+  - Fleet Size: 30; Capacity: 4
+  - Demand Rate: 202.9 trips/h
+  - Dispatching Interval: 30.0 s
+Simulation Results:
+  - Requests:
+    + service rate: 99.0% (196/198)
+    + wait time: 231.6 s
+    + in-vehicle time: 309.5 s
+  - Vehicles:
+    + vehicle service time travelled: 2443.0 s
+    + vehicle service distance travelled: 20897.5 m
+    + vehicle service time percentage: 67.9%
+    + vehicle rebalancing time travelled: 0.0 s
+    + vehicle rebalancing distance travelled: 0.0 m
+    + vehicle rebalancing time percentage: 0.0%
+
+Scenario: 35; Simulated Annealing: yes; Rebalancing: no
+Simulation starts at 2017-06-06_15:57
+Runtime Time: 1331 s
+System Settings:
+  - Simulation Time: 3600 s
+  - Fleet Size: 30; Capacity: 4
+  - Demand Rate: 202.9 trips/h
+  - Dispatching Interval: 30.0 s
+Simulation Results:
+  - Requests:
+    + service rate: 98.0% (194/198)
+    + wait time: 228.2 s
+    + in-vehicle time: 305.6 s
+  - Vehicles:
+    + vehicle service time travelled: 2522.9 s
+    + vehicle service distance travelled: 21705.5 m
+    + vehicle service time percentage: 70.1%
+    + vehicle rebalancing time travelled: 0.0 s
+    + vehicle rebalancing distance travelled: 0.0 m
+    + vehicle rebalancing time percentage: 0.0%
+
+
+
+Scenario: 35; Simulated Annealing: no; Rebalancing: yes
+Simulation starts at 2017-06-06_16:21
+Runtime Time: 222 s
+System Settings:
+  - Simulation Time: 3600 s
+  - Fleet Size: 30; Capacity: 4
+  - Demand Rate: 202.9 trips/h
+  - Dispatching Interval: 30.0 s
+Simulation Results:
+  - Requests:
+    + service rate: 98.0% (194/198)
+    + wait time: 180.4 s
+    + in-vehicle time: 280.2 s
+  - Vehicles:
+    + vehicle service time travelled: 2376.3 s
+    + vehicle service distance travelled: 21087.5 m
+    + vehicle service time percentage: 66.0%
+    + vehicle rebalancing time travelled: 1156.6 s
+    + vehicle rebalancing distance travelled: 11383.6 m
+    + vehicle rebalancing time percentage: 32.1%
+
+Scenario: 35; Simulated Annealing: no; Rebalancing: yes
+Simulation starts at 2017-06-06_16:25
+Runtime Time: 220 s
+System Settings:
+  - Simulation Time: 3600 s
+  - Fleet Size: 30; Capacity: 4
+  - Demand Rate: 202.9 trips/h
+  - Dispatching Interval: 30.0 s
+Simulation Results:
+  - Requests:
+    + service rate: 97.0% (192/198)
+    + wait time: 195.6 s
+    + in-vehicle time: 290.2 s
+  - Vehicles:
+    + vehicle service time travelled: 2365.8 s
+    + vehicle service distance travelled: 20991.9 m
+    + vehicle service time percentage: 65.7%
+    + vehicle rebalancing time travelled: 1170.2 s
+    + vehicle rebalancing distance travelled: 11180.9 m
+    + vehicle rebalancing time percentage: 32.5%
+
+Scenario: 35; Simulated Annealing: no; Rebalancing: yes
+Simulation starts at 2017-06-06_16:29
+Runtime Time: 217 s
+System Settings:
+  - Simulation Time: 3600 s
+  - Fleet Size: 30; Capacity: 4
+  - Demand Rate: 202.9 trips/h
+  - Dispatching Interval: 30.0 s
+Simulation Results:
+  - Requests:
+    + service rate: 97.0% (192/198)
+    + wait time: 179.5 s
+    + in-vehicle time: 290.5 s
+  - Vehicles:
+    + vehicle service time travelled: 2299.8 s
+    + vehicle service distance travelled: 20311.4 m
+    + vehicle service time percentage: 63.9%
+    + vehicle rebalancing time travelled: 1233.9 s
+    + vehicle rebalancing distance travelled: 11848.5 m
+    + vehicle rebalancing time percentage: 34.3%
+
+Scenario: 35; Simulated Annealing: no; Rebalancing: yes
+Simulation starts at 2017-06-06_16:32
+Runtime Time: 222 s
+System Settings:
+  - Simulation Time: 3600 s
+  - Fleet Size: 30; Capacity: 4
+  - Demand Rate: 202.9 trips/h
+  - Dispatching Interval: 30.0 s
+Simulation Results:
+  - Requests:
+    + service rate: 98.5% (195/198)
+    + wait time: 178.4 s
+    + in-vehicle time: 289.5 s
+  - Vehicles:
+    + vehicle service time travelled: 2371.1 s
+    + vehicle service distance travelled: 20916.4 m
+    + vehicle service time percentage: 65.9%
+    + vehicle rebalancing time travelled: 1165.0 s
+    + vehicle rebalancing distance travelled: 11263.1 m
+    + vehicle rebalancing time percentage: 32.4%
+
+Scenario: 35; Simulated Annealing: no; Rebalancing: yes
+Simulation starts at 2017-06-06_16:36
+Runtime Time: 229 s
+System Settings:
+  - Simulation Time: 3600 s
+  - Fleet Size: 30; Capacity: 4
+  - Demand Rate: 202.9 trips/h
+  - Dispatching Interval: 30.0 s
+Simulation Results:
+  - Requests:
+    + service rate: 99.0% (196/198)
+    + wait time: 194.1 s
+    + in-vehicle time: 290.0 s
+  - Vehicles:
+    + vehicle service time travelled: 2414.6 s
+    + vehicle service distance travelled: 21405.4 m
+    + vehicle service time percentage: 67.1%
+    + vehicle rebalancing time travelled: 1124.5 s
+    + vehicle rebalancing distance travelled: 10805.2 m
+    + vehicle rebalancing time percentage: 31.2%
+
+Scenario: 35; Simulated Annealing: no; Rebalancing: yes
+Simulation starts at 2017-06-06_16:40
+Runtime Time: 228 s
+System Settings:
+  - Simulation Time: 3600 s
+  - Fleet Size: 30; Capacity: 4
+  - Demand Rate: 202.9 trips/h
+  - Dispatching Interval: 30.0 s
+Simulation Results:
+  - Requests:
+    + service rate: 99.0% (196/198)
+    + wait time: 182.7 s
+    + in-vehicle time: 290.0 s
+  - Vehicles:
+    + vehicle service time travelled: 2396.8 s
+    + vehicle service distance travelled: 20982.3 m
+    + vehicle service time percentage: 66.6%
+    + vehicle rebalancing time travelled: 1136.8 s
+    + vehicle rebalancing distance travelled: 11178.9 m
+    + vehicle rebalancing time percentage: 31.6%
+
+Scenario: 35; Simulated Annealing: no; Rebalancing: yes
+Simulation starts at 2017-06-06_16:44
+Runtime Time: 223 s
+System Settings:
+  - Simulation Time: 3600 s
+  - Fleet Size: 30; Capacity: 4
+  - Demand Rate: 202.9 trips/h
+  - Dispatching Interval: 30.0 s
+Simulation Results:
+  - Requests:
+    + service rate: 99.0% (196/198)
+    + wait time: 191.1 s
+    + in-vehicle time: 283.5 s
+  - Vehicles:
+    + vehicle service time travelled: 2433.2 s
+    + vehicle service distance travelled: 21764.9 m
+    + vehicle service time percentage: 67.6%
+    + vehicle rebalancing time travelled: 1100.7 s
+    + vehicle rebalancing distance travelled: 10481.7 m
+    + vehicle rebalancing time percentage: 30.6%
+
+Scenario: 35; Simulated Annealing: no; Rebalancing: yes
+Simulation starts at 2017-06-06_16:47
+Runtime Time: 226 s
+System Settings:
+  - Simulation Time: 3600 s
+  - Fleet Size: 30; Capacity: 4
+  - Demand Rate: 202.9 trips/h
+  - Dispatching Interval: 30.0 s
+Simulation Results:
+  - Requests:
+    + service rate: 98.0% (194/198)
+    + wait time: 196.2 s
+    + in-vehicle time: 292.4 s
+  - Vehicles:
+    + vehicle service time travelled: 2386.6 s
+    + vehicle service distance travelled: 21226.9 m
+    + vehicle service time percentage: 66.3%
+    + vehicle rebalancing time travelled: 1155.2 s
+    + vehicle rebalancing distance travelled: 11224.8 m
+    + vehicle rebalancing time percentage: 32.1%
+
+Simulation starts at 2017-06-06_16:51
+Runtime Time: 229 s
+System Settings:
+  - Simulation Time: 3600 s
+  - Fleet Size: 30; Capacity: 4
+  - Demand Rate: 202.9 trips/h
+  - Dispatching Interval: 30.0 s
+Simulation Results:
+  - Requests:
+    + service rate: 98.0% (194/198)
+    + wait time: 193.7 s
+    + in-vehicle time: 283.4 s
+  - Vehicles:
+    + vehicle service time travelled: 2392.7 s
+    + vehicle service distance travelled: 21412.3 m
+    + vehicle service time percentage: 66.5%
+    + vehicle rebalancing time travelled: 1137.3 s
+    + vehicle rebalancing distance travelled: 11123.9 m
+    + vehicle rebalancing time percentage: 31.6%
+
+Scenario: 35; Simulated Annealing: no; Rebalancing: yes
+Simulation starts at 2017-06-06_16:55
+Runtime Time: 226 s
+System Settings:
+  - Simulation Time: 3600 s
+  - Fleet Size: 30; Capacity: 4
+  - Demand Rate: 202.9 trips/h
+  - Dispatching Interval: 30.0 s
+Simulation Results:
+  - Requests:
+    + service rate: 98.5% (195/198)
+    + wait time: 180.9 s
+    + in-vehicle time: 289.9 s
+  - Vehicles:
+    + vehicle service time travelled: 2439.1 s
+    + vehicle service distance travelled: 21654.3 m
+    + vehicle service time percentage: 67.8%
+    + vehicle rebalancing time travelled: 1096.8 s
+    + vehicle rebalancing distance travelled: 10386.3 m
+    + vehicle rebalancing time percentage: 30.5%
+
+
+
+Scenario: IZ; Simulated Annealing: yes; Rebalancing: yes
+Simulation starts at 2017-06-06_17:03
+Runtime Time: 1238 s
+System Settings:
+  - Simulation Time: 3600 s
+  - Fleet Size: 30; Capacity: 4
+  - Demand Rate: 202.9 trips/h
+  - Dispatching Interval: 30.0 s
+Simulation Results:
+  - Requests:
+    + service rate: 98.5% (195/198)
+    + wait time: 187.9 s
+    + in-vehicle time: 290.6 s
+  - Vehicles:
+    + vehicle service time travelled: 2392.3 s
+    + vehicle service distance travelled: 21494.4 m
+    + vehicle service time percentage: 66.5%
+    + vehicle rebalancing time travelled: 1147.6 s
+    + vehicle rebalancing distance travelled: 10870.1 m
+    + vehicle rebalancing time percentage: 31.9%
+
+Scenario: IZ; Simulated Annealing: yes; Rebalancing: yes
+Simulation starts at 2017-06-06_17:24
+Runtime Time: 1296 s
+System Settings:
+  - Simulation Time: 3600 s
+  - Fleet Size: 30; Capacity: 4
+  - Demand Rate: 202.9 trips/h
+  - Dispatching Interval: 30.0 s
+Simulation Results:
+  - Requests:
+    + service rate: 99.5% (197/198)
+    + wait time: 200.1 s
+    + in-vehicle time: 298.4 s
+  - Vehicles:
+    + vehicle service time travelled: 2469.5 s
+    + vehicle service distance travelled: 21952.8 m
+    + vehicle service time percentage: 68.6%
+    + vehicle rebalancing time travelled: 1071.0 s
+    + vehicle rebalancing distance travelled: 10356.6 m
+    + vehicle rebalancing time percentage: 29.8%
+
+Scenario: IZ; Simulated Annealing: yes; Rebalancing: yes
+Simulation starts at 2017-06-06_17:45
+Runtime Time: 1201 s
+System Settings:
+  - Simulation Time: 3600 s
+  - Fleet Size: 30; Capacity: 4
+  - Demand Rate: 202.9 trips/h
+  - Dispatching Interval: 30.0 s
+Simulation Results:
+  - Requests:
+    + service rate: 99.0% (196/198)
+    + wait time: 187.4 s
+    + in-vehicle time: 289.7 s
+  - Vehicles:
+    + vehicle service time travelled: 2408.0 s
+    + vehicle service distance travelled: 21345.9 m
+    + vehicle service time percentage: 66.9%
+    + vehicle rebalancing time travelled: 1122.4 s
+    + vehicle rebalancing distance travelled: 10853.5 m
+    + vehicle rebalancing time percentage: 31.2%
+
+cenario: IZ; Simulated Annealing: yes; Rebalancing: yes
+Simulation starts at 2017-06-06_18:06
+Runtime Time: 1144 s
+System Settings:
+  - Simulation Time: 3600 s
+  - Fleet Size: 30; Capacity: 4
+  - Demand Rate: 202.9 trips/h
+  - Dispatching Interval: 30.0 s
+Simulation Results:
+  - Requests:
+    + service rate: 98.5% (195/198)
+    + wait time: 186.5 s
+    + in-vehicle time: 286.2 s
+  - Vehicles:
+    + vehicle service time travelled: 2379.7 s
+    + vehicle service distance travelled: 21202.3 m
+    + vehicle service time percentage: 66.1%
+    + vehicle rebalancing time travelled: 1152.2 s
+    + vehicle rebalancing distance travelled: 10968.8 m
+    + vehicle rebalancing time percentage: 32.0%
+
+Scenario: IZ; Simulated Annealing: yes; Rebalancing: yes
+Simulation starts at 2017-06-06_18:25
+Runtime Time: 1070 s
+System Settings:
+  - Simulation Time: 3600 s
+  - Fleet Size: 30; Capacity: 4
+  - Demand Rate: 202.9 trips/h
+  - Dispatching Interval: 30.0 s
+Simulation Results:
+  - Requests:
+    + service rate: 98.5% (195/198)
+    + wait time: 192.2 s
+    + in-vehicle time: 282.1 s
+  - Vehicles:
+    + vehicle service time travelled: 2407.0 s
+    + vehicle service distance travelled: 21397.2 m
+    + vehicle service time percentage: 66.9%
+    + vehicle rebalancing time travelled: 1129.9 s
+    + vehicle rebalancing distance travelled: 10968.0 m
+    + vehicle rebalancing time percentage: 31.4%
+
+Scenario: IZ; Simulated Annealing: yes; Rebalancing: yes
+Simulation starts at 2017-06-06_18:42
+Runtime Time: 1005 s
+System Settings:
+  - Simulation Time: 3600 s
+  - Fleet Size: 30; Capacity: 4
+  - Demand Rate: 202.9 trips/h
+  - Dispatching Interval: 30.0 s
+Simulation Results:
+  - Requests:
+    + service rate: 98.5% (195/198)
+    + wait time: 180.9 s
+    + in-vehicle time: 287.7 s
+  - Vehicles:
+    + vehicle service time travelled: 2377.0 s
+    + vehicle service distance travelled: 21167.4 m
+    + vehicle service time percentage: 66.0%
+    + vehicle rebalancing time travelled: 1162.3 s
+    + vehicle rebalancing distance travelled: 11111.7 m
+    + vehicle rebalancing time percentage: 32.3%
+
+Scenario: IZ; Simulated Annealing: yes; Rebalancing: yes
+Simulation starts at 2017-06-06_18:59
+Runtime Time: 1007 s
+System Settings:
+  - Simulation Time: 3600 s
+  - Fleet Size: 30; Capacity: 4
+  - Demand Rate: 202.9 trips/h
+  - Dispatching Interval: 30.0 s
+Simulation Results:
+  - Requests:
+    + service rate: 98.5% (195/198)
+    + wait time: 178.1 s
+    + in-vehicle time: 282.0 s
+  - Vehicles:
+    + vehicle service time travelled: 2368.8 s
+    + vehicle service distance travelled: 21031.4 m
+    + vehicle service time percentage: 65.8%
+    + vehicle rebalancing time travelled: 1168.9 s
+    + vehicle rebalancing distance travelled: 11630.5 m
+    + vehicle rebalancing time percentage: 32.5%
+
+Scenario: IZ; Simulated Annealing: yes; Rebalancing: yes
+Simulation starts at 2017-06-06_19:16
+Runtime Time: 1061 s
+System Settings:
+  - Simulation Time: 3600 s
+  - Fleet Size: 30; Capacity: 4
+  - Demand Rate: 202.9 trips/h
+  - Dispatching Interval: 30.0 s
+Simulation Results:
+  - Requests:
+    + service rate: 98.5% (195/198)
+    + wait time: 190.2 s
+    + in-vehicle time: 289.4 s
+  - Vehicles:
+    + vehicle service time travelled: 2420.2 s
+    + vehicle service distance travelled: 21499.5 m
+    + vehicle service time percentage: 67.2%
+    + vehicle rebalancing time travelled: 1115.0 s
+    + vehicle rebalancing distance travelled: 10860.1 m
+    + vehicle rebalancing time percentage: 31.0%
+
+Scenario: IZ; Simulated Annealing: yes; Rebalancing: yes
+Simulation starts at 2017-06-06_19:34
+Runtime Time: 1035 s
+System Settings:
+  - Simulation Time: 3600 s
+  - Fleet Size: 30; Capacity: 4
+  - Demand Rate: 202.9 trips/h
+  - Dispatching Interval: 30.0 s
+Simulation Results:
+  - Requests:
+    + service rate: 98.5% (195/198)
+    + wait time: 190.1 s
+    + in-vehicle time: 284.4 s
+  - Vehicles:
+    + vehicle service time travelled: 2420.2 s
+    + vehicle service distance travelled: 21553.9 m
+    + vehicle service time percentage: 67.2%
+    + vehicle rebalancing time travelled: 1122.4 s
+    + vehicle rebalancing distance travelled: 10646.9 m
+    + vehicle rebalancing time percentage: 31.2%
+
+Scenario: IZ; Simulated Annealing: yes; Rebalancing: yes
+Simulation starts at 2017-06-06_19:51
+Runtime Time: 1024 s
+System Settings:
+  - Simulation Time: 3600 s
+  - Fleet Size: 30; Capacity: 4
+  - Demand Rate: 202.9 trips/h
+  - Dispatching Interval: 30.0 s
+Simulation Results:
+  - Requests:
+    + service rate: 99.0% (196/198)
+    + wait time: 185.0 s
+    + in-vehicle time: 286.3 s
+  - Vehicles:
+    + vehicle service time travelled: 2461.0 s
+    + vehicle service distance travelled: 21774.9 m
+    + vehicle service time percentage: 68.4%
+    + vehicle rebalancing time travelled: 1078.3 s
+    + vehicle rebalancing distance travelled: 10625.6 m
+    + vehicle rebalancing time percentage: 30.0%
