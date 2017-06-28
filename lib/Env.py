@@ -31,10 +31,9 @@ class RebalancingEnv(gym.Env):
     def __init__(self, model, penalty=-10):
         self.model = model
         self.shots = []
-        self.W = 5
         self.N = 5
         self.E = 0.5
-        self.dT = REBL_INT
+        self.dT = INT_REBL
         self.penalty = penalty
         self.action_space = spaces.Discrete(9)
         self.state = np.zeros((3,self.N,self.N))
@@ -51,9 +50,9 @@ class RebalancingEnv(gym.Env):
         reward = 0 if action == 0 else self.penalty
         flag = False
         T = self.model.T
-        T_ = self.model.T+REBL_INT
+        T_ = self.model.T+INT_REBL
         while T < T_:
-            T += ASSIGN_INT
+            T += INT_ASSIGN
             self.model.dispatch_at_time(None, T)
             # self.shots.append(copy.deepcopy(self.model.vehs))
             model_.dispatch_at_time(None, T)
@@ -62,14 +61,14 @@ class RebalancingEnv(gym.Env):
                 flag = True
                 break
         while T < T_:
-            T += ASSIGN_INT
+            T += INT_ASSIGN
             self.model.dispatch_at_time(None, T)
             # self.shots.append(copy.deepcopy(self.model.vehs))  
         while not self.is_vehicle_idle():
             T = self.model.T
-            T_ = self.model.T+REBL_INT
+            T_ = self.model.T+INT_REBL
             while T < T_:
-                T += ASSIGN_INT
+                T += INT_ASSIGN
                 self.model.dispatch_at_time(None, T)
                 # self.shots.append(copy.deepcopy(self.model.vehs))
         if flag:
@@ -91,7 +90,7 @@ class RebalancingEnv(gym.Env):
     
     def act(self, action, vid=-1):
         veh = self.model.vehs[vid]
-        self.model.act(veh, action, self.center, self.N, self.N, self.E, self.E)
+        self.model.act(None, veh, action, self.center, self.N, self.N, self.E, self.E)
     
     def reset(self):
         self.update_state()

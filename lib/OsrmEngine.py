@@ -68,9 +68,9 @@ class OsrmEngine(object):
         self.kill_server()
         self.start_server()
             
-    def create_url(self, olat, olng, dlat, dlng, steps="false", annotations="false"):
+    def create_url(self, olng, olat, dlng, dlat, steps="false", annotations="false"):
         return "http://{0}:{1}/route/v1/driving/{2},{3};{4},{5}?alternatives=false&steps={6}&annotations={7}&geometries=geojson".format(
-            self.ghost, self.gport, olat, olng, dlat, dlng, steps, annotations)
+            self.ghost, self.gport, olng, olat, dlng, dlat, steps, annotations)
 
     def call_url(self, url):
         """ Send the request and get the response in Json format """
@@ -94,32 +94,32 @@ class OsrmEngine(object):
                 return (None, False)
         print("The routing server \"http://%s:%d\" fails after 10 retries... :(" % (self.ghost, self.gport) )
 
-    def get_routing(self, olat, olng, dlat, dlng):
-        url = self.create_url(olat, olng, dlat, dlng, steps="true", annotations="false")
+    def get_routing(self, olng, olat, dlng, dlat):
+        url = self.create_url(olng, olat, dlng, dlat, steps="true", annotations="false")
         (response, code) = self.call_url(url)
         if code:
             return response['routes'][0]
         else:
             return None
     
-    def get_distance(self, olat, olng, dlat, dlng):
-        url = self.create_url(olat, olng, dlat, dlng, steps="false", annotations="false")
+    def get_distance(self, olng, olat, dlng, dlat):
+        url = self.create_url(olng, olat, dlng, dlat, steps="false", annotations="false")
         (response, code) = self.call_url(url)
         if code:
             return response['routes'][0]['distance']
         else:
             return None
         
-    def get_duration(self, olat, olng, dlat, dlng):
-        url = self.create_url(olat, olng, dlat, dlng, steps="false", annotations="false")
+    def get_duration(self, olng, olat, dlng, dlat):
+        url = self.create_url(olng, olat, dlng, dlat, steps="false", annotations="false")
         (response, code) = self.call_url(url)
         if code:
             return response['routes'][0]['duration']
         else:
             return None
     
-    def get_distance_duration(self, olat, olng, dlat, dlng):
-        url = self.create_url(olat, olng, dlat, dlng, steps="false", annotations="false")
+    def get_distance_duration(self, olng, olat, dlng, dlat):
+        url = self.create_url(olng, olat, dlng, dlat, steps="false", annotations="false")
         (response, code) = self.call_url(url)
         if code:
             return (response['routes'][0]['distance'], response['routes'][0]['duration'])
