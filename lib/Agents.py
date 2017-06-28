@@ -556,7 +556,7 @@ class Model(object):
                     self.reqs[rid].Td = t
             veh.update_cost_after_move(osrm)
         self.generate_requests_to_time(osrm, T)
-        # print(self)
+        print(self)
         self.assign(osrm, T)
         if T % INT_REOPT == 0:
             if self.reopt == "sa":
@@ -857,10 +857,10 @@ class Model(object):
         if veh_ != None:
             veh_.build_route(osrm, route_)
             veh_.update_cost_after_build()
-            # print("    Insertion Heuristics: veh %d is assigned to req %d" % (veh_.id, req.id) )
+            print("    Insertion Heuristics: veh %d is assigned to req %d" % (veh_.id, req.id) )
             return True
         else:
-            # print("    Insertion Heuristics: req %d is rejected!" % (req.id) )
+            print("    Insertion Heuristics: req %d is rejected!" % (req.id) )
             return False
 
     def simulated_annealing(self, osrm):
