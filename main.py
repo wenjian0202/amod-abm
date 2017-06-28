@@ -17,14 +17,15 @@ from lib.OsrmEngine import *
 from lib.Agents import *
 from lib.Demand import *
 from lib.Constants import *
+from lib.Env import *
 
-FLEET_SIZE = 20
+FLEET_SIZE = 300
 CAPACITY = 4
 
-DEMAND_SCALER = 100
-DEMAND = FM5
-TOTAL_DEMAND = 1
-DEMAND_STR = "FM5"
+DEMAND_SCALER = 1
+DEMAND = DEMAND35
+TOTAL_DEMAND = TOTAL35
+DEMAND_STR = "DEMAND35"
 
 def print_results(model, runtime, now):
 	count_reqs = 0
@@ -85,6 +86,8 @@ def print_results(model, runtime, now):
 	row = [DEMAND_STR, SIMU_ANNEAL, REBALANCE, SIMULATION, model.V, model.K, model.D, 100.0*count_served/count_reqs, count_served, count_reqs, wt, vt, vsdt, vstt, 100.0*vstt/SIMULATION, vrdt, vrtt, 100.0*vrtt/SIMULATION, None]
 	writer.writerow(row)
 	f.close()
+
+	return [wt, vt, 100.0*vstt/SIMULATION, 100.0*vrtt/SIMULATION]
 
 def anim(shots):
 	def init():
@@ -155,14 +158,14 @@ def anim(shots):
 			routes3[i].set_data( r3x, r3y )
 		return vehs, routes1, routes2, routes3
 	
-	fig = plt.figure(figsize=(6,6))
-	plt.xlim((-2.5,2.5))
-	plt.ylim((-2.5,2.5))
-	# fig = plt.figure(figsize=(5.52,6.63))
-	# plt.xlim((-0.02,0.18))
-	# plt.ylim((51.29,51.44))
-	# img = mpimg.imread("map.png")
-	# plt.imshow(img, extent=[-0.02, 0.18, 51.29, 51.44], aspect=0.2/0.15*6.63/5.52)
+	# fig = plt.figure(figsize=(6,6))
+	# plt.xlim((-2.5,2.5))
+	# plt.ylim((-2.5,2.5))
+	fig = plt.figure(figsize=(5.52,6.63))
+	plt.xlim((-0.02,0.18))
+	plt.ylim((51.29,51.44))
+	img = mpimg.imread("map.png")
+	plt.imshow(img, extent=[-0.02, 0.18, 51.29, 51.44], aspect=0.2/0.15*6.63/5.52)
 	fig.subplots_adjust(left=0.00, bottom=0.00, right=1.00, top=1.00)
 	vehs = []
 	routes1 = []
@@ -201,10 +204,31 @@ if __name__ == "__main__":
 		osrm = OsrmEngine(exe_loc, map_loc)
 		osrm.start_server()
 
+	now = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M")
+	env = RebalancingEnv( Model(DEMAND, TOTAL_DEMAND * DEMAND_SCALER, V=FLEET_SIZE, K=CAPACITY), penalty=-0 )
+
+	nb_actions = env.action_space.n
+	input_shape = (1,) + env.state.shape
+	input_dim = env.input_dim
+
+	model = Sequential()
+	model.add(Flatten(input_shape=input_shape))
+	model.add(Dense(256, activation='relu'))
+	model.add(Dense(nb_actions, activation='linear'))
+
+	memory = SequentialMemory(limit=2000, window_length=1)
+	policy = EpsGreedyQPolicy()
+	dqn = DQNAgent(model=model, nb_actions=nb_actions, memory=memory, nb_steps_warmup=100,
+				   target_model_update=1e-2, policy=policy, gamma=.80)
+	dqn.compile(Adam(lr=0.001, epsilon=0.05, decay=0.0), metrics=['mae'])
+
+	dqn.load_weights('dqn_weights_BAL5_150.h5f')
+
+	results = []
 	for ii in range(1):
-		shots = []
+		# shots = []
 		now = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M")
-		model = Model(DEMAND, TOTAL_DEMAND * DEMAND_SCALER, V=FLEET_SIZE, K=CAPACITY)
+		model = Model(DEMAND, TOTAL_DEMAND * DEMAND_SCALER, dqn=dqn, V=FLEET_SIZE, K=CAPACITY)
 		stime = time.time()
 		for T in range(0, WARM_UP+SIMULATION+WRAP_UP,ASSIGN_INT):
 			model.dispatch_at_time(osrm, T)
@@ -216,5 +240,9 @@ if __name__ == "__main__":
 		# anime.save('test.mp4', dpi=300, fps=None, extra_args=['-vcodec', 'libx264'])
 		# plt.show()
 
-		print_results(model, runtime, now)
+		result = print_results(model, runtime, now)
+		results.append(result)
+
+	print("summary: ")
+	print(np.average(np.array(results), axis=0))
 
