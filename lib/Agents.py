@@ -109,7 +109,7 @@ class Veh(object):
         self.lng = lng
         self.lat = lat
 
-    def get_direct_distance(self, lng1, lat1, lng2, lat2):
+    def get_direct_distance(self, lat1, lng1, lat2, lng2):
         # return np.sqrt( (111317 * (lat1-lat2))**2 + (69600 * (lng1-lng2))**2 )
         return np.sqrt( (1000 * (lat1-lat2))**2 + (1000 * (lng1-lng2))**2 )
         
@@ -130,7 +130,7 @@ class Veh(object):
     
     def add_leg(self, osrm, rid, pod, tlng, tlat):
         if DIRECT:
-            dis = self.get_direct_distance(self.tlng, self.tlat, tlng, tlat)
+            dis = self.get_direct_distance(self.tlat, self.tlng, tlat, tlng)
             dur = dis / self.S
             leg = Leg(rid, pod, tlng, tlat, dis, dur, steps=[])
             leg.steps.append(Step(dis, dur, [[self.tlng, self.tlat],[tlng, tlat]]))
@@ -306,7 +306,7 @@ class Veh(object):
                     step = leg.steps[0]
                     if step.t < dT:
                         dT -= step.t
-                        leg.popleft()
+                        leg.steps.popleft()
                         if len(leg.steps) == 0:
                             # corner case: leg.t extremely small, but still larger than dT
                             lng = leg.tlng
@@ -489,12 +489,13 @@ class Model(object):
         rs1: a seeded random generator for requests
         rs2: a seeded random generator for vehicle locations
     """ 
-    def __init__(self, DEMAND, D, V=2, K=4):
-        self.rs1 = np.random.RandomState(920202)
-        self.rs2 = np.random.RandomState(170606)
+    def __init__(self, DEMAND, D, dqn=None, V=2, K=4):
+        self.rs1 = np.random.RandomState(np.random.randint(0,1000000))
+        self.rs2 = np.random.RandomState(np.random.randint(0,1000000))
         self.T = 0.0
         self.DEMAND = DEMAND
         self.D = D
+        self.dqn = dqn
         self.V = V
         self.K = K
         self.vehs = []
@@ -556,6 +557,8 @@ class Model(object):
                 self.rebalance_sar(osrm)
             elif REBALANCE == "orp":
                 self.rebalance_orp(osrm, T)    
+            elif REBALANCE == "dqn" and self.dqn != None:
+                self.rebalance_dqn(osrm)    
         
     def assign(self, osrm, T):
         l = len(self.queue)
@@ -568,56 +571,63 @@ class Model(object):
                 self.simulated_annealing(osrm)
 
     def rebalance_sar(self, osrm):
-        W = 5
-        N = 10
-        E = W/N
-        d = np.zeros((N,N))
-        for dmd in self.DEMAND:
-            for i,j in itertools.product(range(N), range(N)):
-                if dmd[1] >= W/2 - (i+1)*E:
-                    if dmd[0] <= -W/2 + (j+1)*E:
-                        d[i][j] += dmd[4] * self.D
-                        break
-        for veh in self.vehs:
-            if veh.idle and len(veh.route) == 0:
-                n = np.random.uniform(0, self.D)
-                m = 0
-                for i,j in itertools.product(range(N), range(N)):
-                    m += d[i][j]
-                    if m > n:
-                        break
-                route = [(-1, 0, -W/2 + (j+0.5)*E, W/2 - (i+0.5)*E)]
-                veh.build_route(osrm, route)
-                veh.update_cost_after_build()
-
-    def rebalance_orp(self, osrm, T):
-        W = 5
-        N = 10
-        E = W/N
-        d = np.zeros((N,N))
-        v = np.zeros((N,N))
-        s = np.zeros((N,N))
-        b = np.zeros((N,N))
-        for dmd in self.DEMAND:
-            for i,j in itertools.product(range(N), range(N)):
-                if dmd[1] >= W/2 - (i+1)*E:
-                    if dmd[0] <= -W/2 + (j+1)*E:
-                        d[i][j] += dmd[4] * self.D
-                        break
+        Nx = 5
+        Ny = 5
+        Ex = 0.02
+        Ey = 0.015
         for veh in self.vehs:
             if veh.idle:
                 veh.clear_route()
                 veh.rebl = False
-                for i,j in itertools.product(range(N), range(N)):
-                    if veh.lat >= W/2 - (i+1)*E:
-                        if veh.lng <= -W/2 + (j+1)*E:
+                [d, v, s], center = self.get_state(veh, Nx, Ny, Ex, Ey)
+                n = np.random.uniform(0, np.sum(d))
+                m = 0
+                for i,j in itertools.product(range(Ny), range(Nx)):
+                    m += d[i][j]
+                    if m > n:
+                        break
+                route = [(-1, 0, center[i][j][0], center[i][j][1])]
+                veh.build_route(osrm, route)
+                veh.update_cost_after_build()
+
+    def rebalance_orp(self, osrm, T):
+        Wx = 0.2
+        Wy = 0.15
+        Nx = 10
+        Ny = 10
+        Ex = Wx/Nx
+        Ey = Wy/Ny
+        d = np.zeros((Ny,Nx))
+        c = np.zeros((Ny,Nx,2))
+        v = np.zeros((Ny,Nx))
+        s = np.zeros((Ny,Nx))
+        b = np.zeros((Ny,Nx))
+        for dmd in self.DEMAND:
+            for i,j in itertools.product(range(Ny), range(Nx)):
+                if dmd[0] >= 51.44 - (i+1)*Ey:
+                    if dmd[1] <= -0.02 + (j+1)*Ex:
+                        d[i][j] += dmd[4] * self.D
+                        c[i][j][0] += dmd[0] * dmd[4] * self.D
+                        c[i][j][1] += dmd[1] * dmd[4] * self.D
+                        break
+        for i,j in itertools.product(range(Ny), range(Nx)):
+            if d[i][j] != 0:
+                c[i][j][0] /= d[i][j]
+                c[i][j][1] /= d[i][j]
+        for veh in self.vehs:
+            if veh.idle:
+                veh.clear_route()
+                veh.rebl = False
+                for i,j in itertools.product(range(Ny), range(Nx)):
+                    if veh.lat >= 51.44 - (i+1)*Ey:
+                        if veh.lng <= -0.02 + (j+1)*Ex:
                             v[i][j] += 1
                             break
             else:
                 lng, lat, n = veh.get_location_at_time(T+REBL_INT)
-                for i,j in itertools.product(range(N), range(N)):
-                    if lat >= W/2 - (i+1)*E:
-                        if lng <= -W/2 + (j+1)*E:
+                for i,j in itertools.product(range(Ny), range(Nx)):
+                    if lat >= 51.44 - (i+1)*Ey:
+                        if lng <= -0.02 + (j+1)*Ex:
                             if n == 0:
                                 s[i][j] += 0.8
                             elif n == 1:
@@ -629,7 +639,7 @@ class Model(object):
                             else:
                                 s[i][j] += 0.0
                             break
-        for i,j in itertools.product(range(N), range(N)):
+        for i,j in itertools.product(range(Ny), range(Nx)):
             if d[i][j] == 0:
                 continue
             lamda = d[i][j] * REBL_INT/3600
@@ -639,25 +649,25 @@ class Model(object):
                 p += np.exp(-lamda) * (lamda**k) / np.math.factorial(k)
                 k += 1
             b[i][j] = 1 - p
-        while np.sum(v) != 0:
+        while np.sum(v) > 0:
             i, j = np.unravel_index(b.argmax(), b.shape)
             dis = np.inf
             vid = None
             for vid_, veh in enumerate(self.vehs):
                 if veh.idle and not veh.rebl:
                     if DIRECT:
-                        dis_ = veh.get_direct_distance(veh.lng, veh.lat, -W/2 + (j+0.5)*E, W/2 - (i+0.5)*E)
-                        if dis_ < dis:
-                            dis = dis_
-                            vid = vid_
+                        dis_ = veh.get_direct_distance(veh.lat, veh.lng, c[i][j][0], c[i][j][1])
                     else:
-                        assert False
-            route = [(-1, 0, -W/2 + (j+0.5)*E, W/2 - (i+0.5)*E)]
+                        dis_ = osrm.get_distance(veh.lng, veh.lat, c[i][j][1], c[i][j][0])
+                    if dis_ < dis:
+                        dis = dis_
+                        vid = vid_
+            route = [(-1, 0, c[i][j][0], c[i][j][1])]
             self.vehs[vid].build_route(osrm, route)
             self.vehs[vid].update_cost_after_build()
-            for i_, j_ in itertools.product(range(N), range(N)):
-                if self.vehs[vid].lat >= W/2 - (i_+1)*E:
-                    if self.vehs[vid].lng <= -W/2 + (j_+1)*E:
+            for i_, j_ in itertools.product(range(Ny), range(Nx)):
+                if self.vehs[vid].lat >= 51.44 - (i_+1)*Ey:
+                    if self.vehs[vid].lng <= -0.02 + (j_+1)*Ex:
                         v[i_][j_] -= 1
                         break
             s[i][j] += 1
@@ -672,6 +682,141 @@ class Model(object):
             b[i][j] = 1 - p
         assert np.sum(v) == 0
         assert np.min(v) == 0
+
+    def rebalance_dqn(self, osrm):
+        Nx = 5
+        Ny = 5
+        Ex = 0.02
+        Ey = 0.015
+        for veh in self.vehs:
+            if veh.idle:
+                veh.clear_route()
+                veh.rebl = False
+                state, center = self.get_state(veh, Nx, Ny, Ex, Ey)
+                action = self.dqn.forward(state)
+                self.act(osrm, veh, action, center, Nx, Ny, Ex, Ey)
+
+    def get_state(self, veh, Nx, Ny, Ex, Ey):
+        lng = veh.lng
+        lat = veh.lat
+        d = np.zeros((Ny,Nx))
+        c = np.zeros((Ny,Nx,2))
+        v = np.zeros((Ny,Nx))
+        s = np.zeros((Ny,Nx))
+        for dmd in self.DEMAND:
+            for i,j in itertools.product(range(Ny), range(Nx)):
+                if dmd[0] <= lat + Ny*Ey/2 - i*Ey and dmd[0] >= lat + Ny*Ey/2 - (i+1)*Ey:
+                    if dmd[1] >= lng - Nx*Ex/2 + j*Ex and dmd[1] <= lng - Nx*Ex/2 + (j+1)*Ex:
+                        d[i][j] += dmd[4] * self.D
+                        c[i][j][0] += dmd[0] * dmd[4] * self.D
+                        c[i][j][1] += dmd[1] * dmd[4] * self.D
+                        break
+        for i,j in itertools.product(range(Ny), range(Nx)):
+            if d[i][j] != 0:
+                c[i][j][0] /= d[i][j]
+                c[i][j][1] /= d[i][j]
+            else:
+                c[i][j][0] = False
+                c[i][j][1] = False
+        for veh_ in self.vehs:
+            if veh_.idle:
+                for i,j in itertools.product(range(Ny), range(Nx)):
+                    if veh_.lat <= lat + Ny*Ey/2 - i*Ey and veh_.lat >= lat + Ny*Ey/2 - (i+1)*Ey:
+                        if veh_.lng >= lng - Nx*Ex/2 + j*Ex and veh_.lng <= lng - Nx*Ex/2 + (j+1)*Ex:
+                            v[i][j] += 1
+                            break
+            else:
+                lng_, lat_, n = veh_.get_location_at_time(self.T+REBL_INT)
+                for i,j in itertools.product(range(Ny), range(Ny)):
+                    if lat_ <= lat + Ny*Ey/2 - i*Ey and lat_ >= lat + Ny*Ey/2 - (i+1)*Ey:
+                        if lng_ >= lng - Nx*Ex/2 + j*Ex and lng_ <= lng - Nx*Ex/2 + (j+1)*Ex:
+                            if n == 0:
+                                s[i][j] += 0.8
+                            elif n == 1:
+                                s[i][j] += 0.4
+                            elif n == 2:
+                                s[i][j] += 0.2
+                            elif n == 3:
+                                s[i][j] += 0.1
+                            else:
+                                s[i][j] += 0.0
+                            break
+        return [d,v,s], c
+
+    def act(self, osrm, veh, action, c, Nx, Ny, Ex, Ey):
+        assert veh.idle
+        i = int((Ny-1)/2)
+        j = int((Nx-1)/2)
+        lng = veh.lng
+        lat = veh.lat
+        if action == 0:
+            if c[i][j][0]:
+                lat = c[i][j][0]
+                lng = c[i][j][1]
+            else:
+                action = np.random.randint(1, 9)
+        if action == 1:
+            if c[i-1][j+1][0]:
+                lat = c[i-1][j+1][0]
+                lng = c[i-1][j+1][1]
+            elif c[i-2][j+2][0]:
+                lat = c[i-2][j+2][0]
+                lng = c[i-2][j+2][1]
+        elif action == 2:
+            if c[i][j+1][0]:
+                lat = c[i][j+1][0]
+                lng = c[i][j+1][1]
+            elif c[i][j+2][0]:
+                lat = c[i][j+2][0]
+                lng = c[i][j+2][1]
+        elif action == 3:
+            if c[i+1][j+1][0]:
+                lat = c[i+1][j+1][0]
+                lng = c[i+1][j+1][1]
+            elif c[i+2][j+2][0]:
+                lat = c[i+2][j+2][0]
+                lng = c[i+2][j+2][1]  
+        elif action == 4:
+            if c[i+1][j][0]:
+                lat = c[i+1][j][0]
+                lng = c[i+1][j][1]
+            elif c[i+2][j][0]:
+                lat = c[i+2][j][0]
+                lng = c[i+2][j][1]
+        elif action == 5:
+            if c[i+1][j-1][0]:
+                lat = c[i+1][j-1][0]
+                lng = c[i+1][j-1][1]
+            elif c[i+2][j-2][0]:
+                lat = c[i+2][j-2][0]
+                lng = c[i+2][j-2][1]
+        elif action == 6:
+            if c[i][j-1][0]:
+                lat = c[i][j-1][0]
+                lng = c[i][j-1][1]
+            elif c[i][j-2][0]:
+                lat = c[i][j-2][0]
+                lng = c[i][j-2][1]
+        elif action == 7:
+            if c[i-1][j-1][0]:
+                lat = c[i-1][j-1][0]
+                lng = c[i-1][j-1][1]
+            elif c[i-2][j-2][0]:
+                lat = c[i-2][j-2][0]
+                lng = c[i-2][j-2][1]
+        elif action == 8:
+            if c[i-1][j][0]:
+                lat = c[i-1][j][0]
+                lng = c[i-1][j][1]
+            elif c[i-2][j][0]:
+                lat = c[i-2][j][0]
+                lng = c[i-2][j][1]
+        route = [(-1, 0, lng, lat)]
+        # print(lng, lat, action, route)
+        veh.clear_route()
+        veh.rebl = False
+        veh.build_route(osrm, route)
+        veh.update_cost_after_build()
         
     def insert_heuristics(self, osrm, req):
         dc_ = np.inf
@@ -887,7 +1032,7 @@ class Model(object):
         for (rid, pod, tlng, tlat) in route:
             dt = 0
             if DIRECT:
-                dt = veh.get_direct_distance(lng, lat, tlng, tlat) / veh.S
+                dt = veh.get_direct_distance(lat, lng, tlat, tlng) / veh.S
             else:
                 dt = osrm.get_duration(lng, lat, tlng, tlat)
             t += dt
