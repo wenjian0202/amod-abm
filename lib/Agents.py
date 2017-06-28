@@ -80,13 +80,13 @@ class Veh(object):
         self.rebl = False
         self.T = T
         if DIRECT:
-            self.lat = rs.uniform(-2.5, 2.5)
             self.lng = rs.uniform(-2.5, 2.5)
+            self.lat = rs.uniform(-2.5, 2.5)
         else:
-            self.lat = lat + rs.normal(0.0, 0.030)
             self.lng = lng + rs.normal(0.0, 0.030) 
-        self.tlat = lat
+            self.lat = lat + rs.normal(0.0, 0.030)
         self.tlng = lng
+        self.tlat = lat
         self.K = K
         self.S = S
         self.n = 0
@@ -109,9 +109,11 @@ class Veh(object):
         self.lng = lng
         self.lat = lat
 
-    def get_direct_distance(self, lat1, lng1, lat2, lng2):
-        # return np.sqrt( (111317 * (lat1-lat2))**2 + (69600 * (lng1-lng2))**2 )
-        return np.sqrt( (1000 * (lat1-lat2))**2 + (1000 * (lng1-lng2))**2 )
+    def get_direct_distance(self, lng1, lat1, lng2, lat2):
+        if DIRECT:
+            return np.sqrt( (1000 * (lng1-lng2))**2 + (1000 * (lat1-lat2))**2 )
+        else:
+            return np.sqrt( (69600 * (lng1-lng2))**2 + (111317 * (lat1-lat2))**2 )
         
     def build_route(self, osrm, route):
         if len(route) == 0:
@@ -130,7 +132,7 @@ class Veh(object):
     
     def add_leg(self, osrm, rid, pod, tlng, tlat):
         if DIRECT:
-            dis = self.get_direct_distance(self.tlat, self.tlng, tlat, tlng)
+            dis = self.get_direct_distance(self.tlng, self.tlat, tlng, tlat)
             dur = dis / self.S
             leg = Leg(rid, pod, tlng, tlat, dis, dur, steps=[])
             leg.steps.append(Step(dis, dur, [[self.tlng, self.tlat],[tlng, tlat]]))
@@ -235,7 +237,7 @@ class Veh(object):
             if leg.t < dT:
                 dT -= leg.t
                 self.T += leg.t
-                if self.T >= WARM_UP and self.T <= WARM_UP+SIMULATION:
+                if self.T >= T_WARM_UP and self.T <= T_WARM_UP+T_SIMULATION:
                     self.Ts += leg.t if leg.rid != -1 else 0
                     self.Ds += leg.d if leg.rid != -1 else 0
                     self.Tr += leg.t if leg.rid == -1 else 0
@@ -250,7 +252,7 @@ class Veh(object):
                     if step.t < dT:
                         dT -= step.t
                         self.T += step.t
-                        if self.T >= WARM_UP and self.T <= WARM_UP+SIMULATION:
+                        if self.T >= T_WARM_UP and self.T <= T_WARM_UP+T_SIMULATION:
                             self.Ts += step.t if leg.rid != -1 else 0
                             self.Ds += step.d if leg.rid != -1 else 0
                             self.Tr += step.t if leg.rid == -1 else 0
@@ -265,7 +267,7 @@ class Veh(object):
                             break
                     else:
                         pct = dT / step.t
-                        if self.T >= WARM_UP and self.T <= WARM_UP+SIMULATION:
+                        if self.T >= T_WARM_UP and self.T <= T_WARM_UP+T_SIMULATION:
                             self.Ts += dT if leg.rid != -1 else 0
                             self.Ds += step.d * pct if leg.rid != -1 else 0
                             self.Tr += dT if leg.rid == -1 else 0
@@ -429,8 +431,8 @@ class Req(object):
     Attributes:
         id: sequential unique id
         Tr: request time
-        olat: origin lngitude
         olng: origin longtitude
+        olat: origin lngitude
         dlng: destination longtitude
         dlat: destination lngitude
         Clp: constraint - latest pickup
@@ -438,13 +440,13 @@ class Req(object):
         Tp: pickup time
         Td: dropoff time
     """
-    def __init__(self, osrm, id, Tr, olat=51.374282, olng=0.115662, dlat=51.350675, dlng=0.089282):
+    def __init__(self, osrm, id, Tr, olng=0.115662, olat=51.374282, dlng=0.089282, dlat=51.350675):
         self.id = id
         self.Tr = Tr
-        self.olat = olat
         self.olng = olng
-        self.dlat = dlat
-        self.dlng = dlng 
+        self.olat = olat
+        self.dlng = dlng
+        self.dlat = dlat 
         if DIRECT:
             self.Clp = np.inf
             self.Cld = np.inf
@@ -478,22 +480,24 @@ class Model(object):
     Model is the class for the AMoD system
     Attributes:
         T: system time at current state
-        DEMAND: demand matrix
+        M: demand matrix
         D: arrival rate (trips/hour)
+        dqn: deep Q network for rebalancing
         V: number of vehicles
         K: capacity of vehicles
         vehs: the list of vehicles
         N: number of requests
         reqs: the list of requests
+        reqs: the list of rejected requests
         queue: requests in the queue
         rs1: a seeded random generator for requests
         rs2: a seeded random generator for vehicle locations
     """ 
-    def __init__(self, DEMAND, D, dqn=None, V=2, K=4):
+    def __init__(self, M, D, dqn=None, V=2, K=4, rebl="no", reopt="no"):
         self.rs1 = np.random.RandomState(np.random.randint(0,1000000))
         self.rs2 = np.random.RandomState(np.random.randint(0,1000000))
         self.T = 0.0
-        self.DEMAND = DEMAND
+        self.M = M
         self.D = D
         self.dqn = dqn
         self.V = V
@@ -505,25 +509,27 @@ class Model(object):
         self.reqs = []
         self.rejs = []
         self.queue = deque([])
+        self.rebl = rebl
+        self.reopt = reopt
         
     def generate_request(self, osrm):
         dt = 3600.0/self.D * self.rs1.exponential()
         rand = self.rs1.rand()
-        for d in self.DEMAND:
-            if d[5] > rand:
+        for m in self.M:
+            if m[5] > rand:
                 req = Req(osrm, 
                           0 if self.N == 0 else self.reqs[-1].id+1,
                           dt if self.N == 0 else self.reqs[-1].Tr+dt,
-                          d[0], d[1], d[2], d[3])
+                          m[0], m[1], m[2], m[3])
                 break
         return req
 
     def generate_request_random_seed(self, osrm):
         dt = 3600.0/self.D * np.random.exponential()
         rand = np.random.rand()
-        for d in self.DEMAND:
-            if d[5] > rand:
-                req = Req(osrm, -1, -1, d[0], d[1], d[2], d[3])
+        for m in self.M:
+            if m[5] > rand:
+                req = Req(osrm, -1, -1, m[0], m[1], m[2], m[3])
                 break
         return req
         
@@ -550,14 +556,18 @@ class Model(object):
                     self.reqs[rid].Td = t
             veh.update_cost_after_move(osrm)
         self.generate_requests_to_time(osrm, T)
-        print(self)
+        # print(self)
         self.assign(osrm, T)
-        if T % REBL_INT == 0:
-            if REBALANCE == "sar":
+        if T % INT_REOPT == 0:
+            if self.reopt == "sa":
+                self.simulated_annealing(osrm)
+        if T % INT_REBL == 0:
+            if self.rebl == "sar":
                 self.rebalance_sar(osrm)
-            elif REBALANCE == "orp":
+            elif self.rebl == "orp":
                 self.rebalance_orp(osrm, T)    
-            elif REBALANCE == "dqn" and self.dqn != None:
+            elif self.rebl == "dqn":
+                assert self.dqn != None
                 self.rebalance_dqn(osrm)    
         
     def assign(self, osrm, T):
@@ -566,9 +576,6 @@ class Model(object):
             req = self.queue.popleft()
             if not self.insert_heuristics(osrm, req):
                 self.rejs.append(req)
-        if SIMU_ANNEAL == "yes":
-            if T >= WARM_UP:
-                self.simulated_annealing(osrm)
 
     def rebalance_sar(self, osrm):
         Nx = 5
@@ -591,24 +598,24 @@ class Model(object):
                 veh.update_cost_after_build()
 
     def rebalance_orp(self, osrm, T):
-        Wx = 0.2
-        Wy = 0.15
+        Wx = -0.02
+        Wy = 51.44
         Nx = 10
         Ny = 10
-        Ex = Wx/Nx
-        Ey = Wy/Ny
+        Ex = 0.02
+        Ey = 0.015
         d = np.zeros((Ny,Nx))
         c = np.zeros((Ny,Nx,2))
         v = np.zeros((Ny,Nx))
         s = np.zeros((Ny,Nx))
         b = np.zeros((Ny,Nx))
-        for dmd in self.DEMAND:
+        for m in self.M:
             for i,j in itertools.product(range(Ny), range(Nx)):
-                if dmd[0] >= 51.44 - (i+1)*Ey:
-                    if dmd[1] <= -0.02 + (j+1)*Ex:
-                        d[i][j] += dmd[4] * self.D
-                        c[i][j][0] += dmd[0] * dmd[4] * self.D
-                        c[i][j][1] += dmd[1] * dmd[4] * self.D
+                if m[1] >= Wy - (i+1)*Ey:
+                    if m[0] <= Wx + (j+1)*Ex:
+                        d[i][j] += m[4] * self.D
+                        c[i][j][0] += m[0] * m[4] * self.D
+                        c[i][j][1] += m[1] * m[4] * self.D
                         break
         for i,j in itertools.product(range(Ny), range(Nx)):
             if d[i][j] != 0:
@@ -619,15 +626,15 @@ class Model(object):
                 veh.clear_route()
                 veh.rebl = False
                 for i,j in itertools.product(range(Ny), range(Nx)):
-                    if veh.lat >= 51.44 - (i+1)*Ey:
-                        if veh.lng <= -0.02 + (j+1)*Ex:
+                    if veh.lat >= Wy - (i+1)*Ey:
+                        if veh.lng <= Wx + (j+1)*Ex:
                             v[i][j] += 1
                             break
             else:
-                lng, lat, n = veh.get_location_at_time(T+REBL_INT)
+                lng, lat, n = veh.get_location_at_time(T+INT_REBL)
                 for i,j in itertools.product(range(Ny), range(Nx)):
-                    if lat >= 51.44 - (i+1)*Ey:
-                        if lng <= -0.02 + (j+1)*Ex:
+                    if lat >= Wy - (i+1)*Ey:
+                        if lng <= Wx + (j+1)*Ex:
                             if n == 0:
                                 s[i][j] += 0.8
                             elif n == 1:
@@ -642,7 +649,7 @@ class Model(object):
         for i,j in itertools.product(range(Ny), range(Nx)):
             if d[i][j] == 0:
                 continue
-            lamda = d[i][j] * REBL_INT/3600
+            lamda = d[i][j] * INT_REBL/3600
             k = 0
             p = 0.0
             while k <= s[i][j]:
@@ -656,9 +663,9 @@ class Model(object):
             for vid_, veh in enumerate(self.vehs):
                 if veh.idle and not veh.rebl:
                     if DIRECT:
-                        dis_ = veh.get_direct_distance(veh.lat, veh.lng, c[i][j][0], c[i][j][1])
+                        dis_ = veh.get_direct_distance(veh.lng, veh.lat, c[i][j][0], c[i][j][1])
                     else:
-                        dis_ = osrm.get_distance(veh.lng, veh.lat, c[i][j][1], c[i][j][0])
+                        dis_ = osrm.get_distance(veh.lng, veh.lat, c[i][j][0], c[i][j][1])
                     if dis_ < dis:
                         dis = dis_
                         vid = vid_
@@ -666,14 +673,14 @@ class Model(object):
             self.vehs[vid].build_route(osrm, route)
             self.vehs[vid].update_cost_after_build()
             for i_, j_ in itertools.product(range(Ny), range(Nx)):
-                if self.vehs[vid].lat >= 51.44 - (i_+1)*Ey:
-                    if self.vehs[vid].lng <= -0.02 + (j_+1)*Ex:
+                if self.vehs[vid].lat >= Wy - (i_+1)*Ey:
+                    if self.vehs[vid].lng <= Wx + (j_+1)*Ex:
                         v[i_][j_] -= 1
                         break
             s[i][j] += 1
             if d[i][j] == 0:
                 continue
-            lamda = d[i][j] * REBL_INT/3600
+            lamda = d[i][j] * INT_REBL/3600
             k = 0
             p = 0.0
             while k <= s[i][j]:
@@ -703,13 +710,13 @@ class Model(object):
         c = np.zeros((Ny,Nx,2))
         v = np.zeros((Ny,Nx))
         s = np.zeros((Ny,Nx))
-        for dmd in self.DEMAND:
+        for m in self.M:
             for i,j in itertools.product(range(Ny), range(Nx)):
-                if dmd[0] <= lat + Ny*Ey/2 - i*Ey and dmd[0] >= lat + Ny*Ey/2 - (i+1)*Ey:
-                    if dmd[1] >= lng - Nx*Ex/2 + j*Ex and dmd[1] <= lng - Nx*Ex/2 + (j+1)*Ex:
-                        d[i][j] += dmd[4] * self.D
-                        c[i][j][0] += dmd[0] * dmd[4] * self.D
-                        c[i][j][1] += dmd[1] * dmd[4] * self.D
+                if m[1] <= lat + Ny*Ey/2 - i*Ey and m[1] >= lat + Ny*Ey/2 - (i+1)*Ey:
+                    if m[0] >= lng - Nx*Ex/2 + j*Ex and m[0] <= lng - Nx*Ex/2 + (j+1)*Ex:
+                        d[i][j] += m[4] * self.D
+                        c[i][j][0] += m[0] * m[4] * self.D
+                        c[i][j][1] += m[1] * m[4] * self.D
                         break
         for i,j in itertools.product(range(Ny), range(Nx)):
             if d[i][j] != 0:
@@ -726,7 +733,7 @@ class Model(object):
                             v[i][j] += 1
                             break
             else:
-                lng_, lat_, n = veh_.get_location_at_time(self.T+REBL_INT)
+                lng_, lat_, n = veh_.get_location_at_time(self.T+INT_REBL)
                 for i,j in itertools.product(range(Ny), range(Ny)):
                     if lat_ <= lat + Ny*Ey/2 - i*Ey and lat_ >= lat + Ny*Ey/2 - (i+1)*Ey:
                         if lng_ >= lng - Nx*Ex/2 + j*Ex and lng_ <= lng - Nx*Ex/2 + (j+1)*Ex:
@@ -751,66 +758,66 @@ class Model(object):
         lat = veh.lat
         if action == 0:
             if c[i][j][0]:
-                lat = c[i][j][0]
-                lng = c[i][j][1]
+                lng = c[i][j][0]
+                lat = c[i][j][1]
             else:
                 action = np.random.randint(1, 9)
         if action == 1:
             if c[i-1][j+1][0]:
-                lat = c[i-1][j+1][0]
-                lng = c[i-1][j+1][1]
+                lng = c[i-1][j+1][0]
+                lat = c[i-1][j+1][1]
             elif c[i-2][j+2][0]:
-                lat = c[i-2][j+2][0]
-                lng = c[i-2][j+2][1]
+                lng = c[i-2][j+2][0]
+                lat = c[i-2][j+2][1]
         elif action == 2:
             if c[i][j+1][0]:
-                lat = c[i][j+1][0]
-                lng = c[i][j+1][1]
+                lng = c[i][j+1][0]
+                lat = c[i][j+1][1]
             elif c[i][j+2][0]:
-                lat = c[i][j+2][0]
-                lng = c[i][j+2][1]
+                lng = c[i][j+2][0]
+                lat = c[i][j+2][1]
         elif action == 3:
             if c[i+1][j+1][0]:
-                lat = c[i+1][j+1][0]
-                lng = c[i+1][j+1][1]
+                lng = c[i+1][j+1][0]
+                lat = c[i+1][j+1][1]
             elif c[i+2][j+2][0]:
-                lat = c[i+2][j+2][0]
-                lng = c[i+2][j+2][1]  
+                lng = c[i+2][j+2][0]
+                lat = c[i+2][j+2][1]  
         elif action == 4:
             if c[i+1][j][0]:
-                lat = c[i+1][j][0]
-                lng = c[i+1][j][1]
+                lng = c[i+1][j][0]
+                lat = c[i+1][j][1]
             elif c[i+2][j][0]:
-                lat = c[i+2][j][0]
-                lng = c[i+2][j][1]
+                lng = c[i+2][j][0]
+                lat = c[i+2][j][1]
         elif action == 5:
             if c[i+1][j-1][0]:
-                lat = c[i+1][j-1][0]
-                lng = c[i+1][j-1][1]
+                lng = c[i+1][j-1][0]
+                lat = c[i+1][j-1][1]
             elif c[i+2][j-2][0]:
-                lat = c[i+2][j-2][0]
-                lng = c[i+2][j-2][1]
+                lng = c[i+2][j-2][0]
+                lat = c[i+2][j-2][1]
         elif action == 6:
             if c[i][j-1][0]:
-                lat = c[i][j-1][0]
-                lng = c[i][j-1][1]
+                lng = c[i][j-1][0]
+                lat = c[i][j-1][1]
             elif c[i][j-2][0]:
-                lat = c[i][j-2][0]
-                lng = c[i][j-2][1]
+                lng = c[i][j-2][0]
+                lat = c[i][j-2][1]
         elif action == 7:
             if c[i-1][j-1][0]:
-                lat = c[i-1][j-1][0]
-                lng = c[i-1][j-1][1]
+                lng = c[i-1][j-1][0]
+                lat = c[i-1][j-1][1]
             elif c[i-2][j-2][0]:
-                lat = c[i-2][j-2][0]
-                lng = c[i-2][j-2][1]
+                lng = c[i-2][j-2][0]
+                lat = c[i-2][j-2][1]
         elif action == 8:
             if c[i-1][j][0]:
-                lat = c[i-1][j][0]
-                lng = c[i-1][j][1]
+                lng = c[i-1][j][0]
+                lat = c[i-1][j][1]
             elif c[i-2][j][0]:
-                lat = c[i-2][j][0]
-                lng = c[i-2][j][1]
+                lng = c[i-2][j][0]
+                lat = c[i-2][j][1]
         route = [(-1, 0, lng, lat)]
         # print(lng, lat, action, route)
         veh.clear_route()
@@ -850,10 +857,10 @@ class Model(object):
         if veh_ != None:
             veh_.build_route(osrm, route_)
             veh_.update_cost_after_build()
-            print("    Insertion Heuristics: veh %d is assigned to req %d" % (veh_.id, req.id) )
+            # print("    Insertion Heuristics: veh %d is assigned to req %d" % (veh_.id, req.id) )
             return True
         else:
-            print("    Insertion Heuristics: req %d is rejected!" % (req.id) )
+            # print("    Insertion Heuristics: req %d is rejected!" % (req.id) )
             return False
 
     def simulated_annealing(self, osrm):
@@ -1032,7 +1039,7 @@ class Model(object):
         for (rid, pod, tlng, tlat) in route:
             dt = 0
             if DIRECT:
-                dt = veh.get_direct_distance(lat, lng, tlat, tlng) / veh.S
+                dt = veh.get_direct_distance(lng, lat, tlng, tlat) / veh.S
             else:
                 dt = osrm.get_duration(lng, lat, tlng, tlat)
             t += dt

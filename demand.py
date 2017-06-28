@@ -1,7 +1,22 @@
 import numpy as np 
 
-lines = [line.rstrip('\n') for line in open('dqn_log.txt')]
-print(lines[0])
+from lib.Demand import *
+
+w = open("demand.txt", "w")
+w.write("demand = [ \n")
+p__ = 0.0
+for d in DEMAND_IZ:
+	olng = d[1]
+	olat = d[0]
+	dlng = d[3]
+	dlat = d[2]
+	p = d[4] / TOTAL_IZ
+	p_ = d[5]
+	assert np.isclose(p, p_-p__)
+	w.write("(%.6f, %.6f, %.6f, %.6f, %.8f, %.8f), \n" % (olng, olat, dlng, dlat, p, p_)) 
+	p__ = p_
+w.write("]")
+w.close()
 
 # w = open("demand.txt", "w")
 # w.write("demand = [ \n")

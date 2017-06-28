@@ -19,13 +19,17 @@ from lib.Demand import *
 from lib.Constants import *
 from lib.Env import *
 
-FLEET_SIZE = 810
-CAPACITY = 4
+FLEET_SIZE = 20
+VEH_CAPACITY = 4
 
-DEMAND_SCALER = 1600
-DEMAND = BAL20
-TOTAL_DEMAND = 1
-DEMAND_STR = "BAL20"
+DEMAND_MARRIX = BAL5
+TOTAL_DEMAND = 100
+DEMAND_STRING = "BAL5"
+
+REBALANCE = "dqn"
+REOPTIMIZE = "no"
+
+IS_ANIMATION = False
 
 def print_results(model, runtime, now):
     count_reqs = 0
@@ -33,7 +37,7 @@ def print_results(model, runtime, now):
     wt = 0.0
     vt = 0.0
     for req in model.reqs:
-        if req.Tr >= WARM_UP and req.Tr <= WARM_UP+SIMULATION:
+        if req.Tr >= T_WARM_UP and req.Tr <= T_WARM_UP+T_SIMULATION:
             count_reqs += 1
             if not np.isclose(req.Td, -1.0):
                 count_served += 1
@@ -57,15 +61,15 @@ def print_results(model, runtime, now):
     vrdt /= model.V
 
     print("*"*80)
-    print("Scenario: %s; Simulated Annealing: %s; Rebalancing: %s" % (DEMAND_STR, SIMU_ANNEAL, REBALANCE))
-    print("Simulation starts at %s" % (now))
-    print("Runtime Time: %d s" % (runtime))
+    print("Scenario: %s" % (DEMAND_STRING))
+    print("Simulation starts at %s, Runtime Time: %d s" % (now, runtime))
     print("System Settings:")
-    print("  - Simulation Time: %d s" % SIMULATION)
+    print("  - Simulation Time: %d s, with warm-up %d s, wrap-up %d s" % (T_SIMULATION, T_WARM_UP, T_WRAP_UP))
     print("  - Fleet Size: %d; Capacity: %d" % (model.V, model.K))
     print("  - Demand Rate: %.1f trips/h" % (model.D))
-    print("  - Assignment Interval: %.1f s" % ASSIGN_INT)
-    print("  - Rebalancing Interval: %.1f s" % REBL_INT)
+    print("  - Assignment Interval: %.1f s" % INT_ASSIGN)
+    print("  - Reoptimization Policy: %s, Interval: %.1f s" % (REOPTIMIZE, INT_REOPT))
+    print("  - Rebalancing Policy: %s, Interval: %.1f s" % (REBALANCE, INT_REBL))
     print("Simulation Results:")
     print("  - Requests:")
     print("    + service rate: %.1f%% (%d/%d)" % (
@@ -75,19 +79,27 @@ def print_results(model, runtime, now):
     print("  - Vehicles:")
     print("    + vehicle service time travelled: %.1f s" % (vstt))
     print("    + vehicle service distance travelled: %.1f m" % (vsdt))
-    print("    + vehicle service time percentage: %.1f%%" % (100.0*vstt/SIMULATION))
+    print("    + vehicle service time percentage: %.1f%%" % (100.0*vstt/T_SIMULATION))
     print("    + vehicle rebalancing time travelled: %.1f s" % (vrtt))
     print("    + vehicle rebalancing distance travelled: %.1f m" % (vrdt))
-    print("    + vehicle rebalancing time percentage: %.1f%%" % (100.0*vrtt/SIMULATION))
+    print("    + vehicle rebalancing time percentage: %.1f%%" % (100.0*vrtt/T_SIMULATION))
     print("*"*80)
 
     f = open('results.csv', 'a')
     writer = csv.writer(f)
-    row = [DEMAND_STR, SIMU_ANNEAL, REBALANCE, SIMULATION, model.V, model.K, model.D, 100.0*count_served/count_reqs, count_served, count_reqs, wt, vt, vsdt, vstt, 100.0*vstt/SIMULATION, vrdt, vrtt, 100.0*vrtt/SIMULATION, None]
+    row = [DEMAND_STRING, REOPTIMIZE, REBALANCE, T_SIMULATION, model.V, model.K, model.D,
+     100.0*count_served/count_reqs, count_served, count_reqs, 
+     wt, vt, vsdt, vstt, 100.0*vstt/T_SIMULATION, vrdt, vrtt, 100.0*vrtt/T_SIMULATION, None]
     writer.writerow(row)
     f.close()
 
-    return [wt, vt, 100.0*vstt/SIMULATION, 100.0*vrtt/SIMULATION]
+    return [wt, vt, 100.0*vstt/T_SIMULATION, 100.0*vrtt/T_SIMULATION]
+
+def print_summary(results):
+    print("*"*80)
+    print("Simulation Summary: ")
+    print(np.average(np.array(results), axis=0))
+    print("*"*80)
 
 def anim(shots):
     def init():
@@ -283,7 +295,7 @@ if __name__ == "__main__":
     for i in range(1):
         for j in range(1):
             now = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M")
-            env = RebalancingEnv( Model(DEMAND, TOTAL_DEMAND * DEMAND_SCALER, V=FLEET_SIZE, K=CAPACITY), penalty=-0 )
+            env = RebalancingEnv( Model(DEMAND_MARRIX, TOTAL_DEMAND, V=FLEET_SIZE, K=VEH_CAPACITY), penalty=-0 )
 
             nb_actions = env.action_space.n
             input_shape = (1,) + env.state.shape
@@ -292,7 +304,6 @@ if __name__ == "__main__":
             model = Sequential()
             model.add(Flatten(input_shape=input_shape))
             model.add(Dense(256, activation='relu'))
-            # model.add(Dense(64, activation='relu'))
             model.add(Dense(nb_actions, activation='linear'))
 
             memory = SequentialMemory(limit=2000, window_length=1)
@@ -301,37 +312,40 @@ if __name__ == "__main__":
                            target_model_update=1e-2, policy=policy, gamma=.80)
             dqn.compile(Adam(lr=0.001, epsilon=0.05, decay=0.0), metrics=['mae'])
 
-            # dqn.fit(env, nb_steps=3000, action_repetition=1, visualize=False, verbose=2)
+            dqn.fit(env, nb_steps=3000, action_repetition=1, visualize=False, verbose=2)
             # dqn.save_weights('dqn_weights_%s.h5f' % (now), overwrite=True)
-            dqn.load_weights('dqn_weights_BAL5_150.h5f')
+            # dqn.load_weights('dqn_weights_BAL5_150.h5f')
 
             # anime = anim(env.shots)
             # anime.save('test.mp4', dpi=300, fps=None, extra_args=['-vcodec', 'libx264'])
             # plt.show()
 
             results = []
-            for ii in range(10):
+            for ii in range(1):
                 shots = []
-                model = Model(DEMAND, TOTAL_DEMAND * DEMAND_SCALER, dqn=dqn, V=FLEET_SIZE, K=CAPACITY)
+                now = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M")
+                model = Model(DEMAND_MARRIX, TOTAL_DEMAND, dqn=dqn, V=FLEET_SIZE, K=VEH_CAPACITY, rebl=REBALANCE, reopt=REOPTIMIZE)
                 stime = time.time()
-                for T in range(0, WARM_UP+SIMULATION+WRAP_UP,ASSIGN_INT):
+                for T in range(0, T_WARM_UP+T_SIMULATION+T_WRAP_UP, INT_ASSIGN):
                     model.dispatch_at_time(osrm, T)
+                    if IS_ANIMATION:
+                        shots.append(copy.deepcopy(model.vehs))
                 etime = time.time()
                 runtime = etime - stime
 
-                # anime = anim(shots)
-                # anime.save('test.mp4', dpi=300, fps=None, extra_args=['-vcodec', 'libx264'])
-                # plt.show()
+                if IS_ANIMATION:
+                    anime = anim(shots)
+                    anime.save('test.mp4', dpi=300, fps=None, extra_args=['-vcodec', 'libx264'])
+                    plt.show()
 
                 result = print_results(model, runtime, now)
                 results.append(result)
-            print("summary: ")
-            print(np.average(np.array(results), axis=0))
+
+            print_summary(results)
 
             # draw(model.vehs)
             # # plt.show()
             # plt.savefig('fig1.eps', format='eps', dpi=1000)
-
 
             # if np.average(np.array(results), axis=0)[0] < 160:
             #     dqn.save_weights('dqn_weights_%s.h5f' % (now), overwrite=True)
