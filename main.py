@@ -23,7 +23,7 @@ FLEET_SIZE = 20
 VEH_CAPACITY = 4
 
 DEMAND_MARRIX = M_35
-TOTAL_DEMAND = D_35/10
+TOTAL_DEMAND = 100
 DEMAND_STRING = "ASC35"
 
 REBALANCE = "orp"
@@ -36,6 +36,7 @@ def print_results(model, runtime, now):
 	count_served = 0
 	wt = 0.0
 	vt = 0.0
+	df = 0.0
 	for req in model.reqs:
 		if req.Tr >= T_WARM_UP and req.Tr <= T_WARM_UP+T_SIMULATION:
 			count_reqs += 1
@@ -43,52 +44,67 @@ def print_results(model, runtime, now):
 				count_served += 1
 				wt += (req.Tp - req.Tr)
 				vt += (req.Td - req.Tp)
-	wt /= count_served
-	vt /= count_served
+				df += req.D
+	if not count_served == 0:
+		wt /= count_served
+		vt /= count_served
+		df /= count_served
 	
 	vstt = 0.0
 	vsdt = 0.0
 	vrtt = 0.0
 	vrdt = 0.0
+	ltt = 0.0
+	ldt = 0.0
 	for veh in model.vehs:
 		vstt += veh.Ts
 		vsdt += veh.Ds
 		vrtt += veh.Tr
 		vrdt += veh.Dr
+		ltt += veh.Lt / T_SIMULATION
+		ldt += veh.Ld / (veh.Ds + veh.Dr)
 	vstt /= model.V
 	vsdt /= model.V
 	vrtt /= model.V
 	vrdt /= model.V
+	ltt /= model.V
+	ldt /= model.V
+
+	rate = 0.0
+	if not count_reqs == 0:
+		rate = 100.0*count_served/count_reqs
 
 	print("*"*80)
-	print("Scenario: %s" % (DEMAND_STRING))
-	print("Simulation starts at %s, Runtime Time: %d s" % (now, runtime))
-	print("System Settings:")
-	print("  - Simulation Time: %d s, with warm-up %d s, wrap-up %d s" % (T_SIMULATION, T_WARM_UP, T_WRAP_UP))
-	print("  - Fleet Size: %d; Capacity: %d" % (model.V, model.K))
-	print("  - Demand Rate: %.1f trips/h" % (model.D))
-	print("  - Assignment Interval: %.1f s" % INT_ASSIGN)
-	print("  - Reoptimization Policy: %s, Interval: %.1f s" % (REOPTIMIZE, INT_REOPT))
-	print("  - Rebalancing Policy: %s, Interval: %.1f s" % (REBALANCE, INT_REBL))
-	print("Simulation Results:")
-	print("  - Requests:")
+	print("scenario: %s" % (DEMAND_STRING))
+	print("simulation starts at %s, runtime time: %d s" % (now, runtime))
+	print("system settings:")
+	print("  - simulation time: %d s, with warm-up %d s, wrap-up %d s" % (T_SIMULATION, T_WARM_UP, T_WRAP_UP))
+	print("  - fleet size: %d; capacity: %d" % (model.V, model.K))
+	print("  - demand Rate: %.1f trips/h" % (model.D))
+	print("  - assignment interval: %.1f s" % INT_ASSIGN)
+	print("  - reoptimization policy: %s, interval: %.1f s" % (REOPTIMIZE, INT_REOPT))
+	print("  - rebalancing policy: %s, interval: %.1f s" % (REBALANCE, INT_REBL))
+	print("simulation results:")
+	print("  - requests:")
 	print("    + service rate: %.1f%% (%d/%d)" % (
-		100.0*count_served/count_reqs, count_served, count_reqs))
+		rate, count_served, count_reqs))
 	print("    + wait time: %.1f s" % (wt))
 	print("    + in-vehicle time: %.1f s" % (vt))
-	print("  - Vehicles:")
+	print("    + detour factor: %.2f" % (df))
+	print("  - vehicles:")
 	print("    + vehicle service time travelled: %.1f s" % (vstt))
 	print("    + vehicle service distance travelled: %.1f m" % (vsdt))
 	print("    + vehicle service time percentage: %.1f%%" % (100.0*vstt/T_SIMULATION))
 	print("    + vehicle rebalancing time travelled: %.1f s" % (vrtt))
 	print("    + vehicle rebalancing distance travelled: %.1f m" % (vrdt))
 	print("    + vehicle rebalancing time percentage: %.1f%%" % (100.0*vrtt/T_SIMULATION))
+	print("    + vehicle average load: %.2f (time weighted), %.2f (distance weighted)" % (ltt, ldt))
 	print("*"*80)
 
 	f = open('results.csv', 'a')
 	writer = csv.writer(f)
 	row = [DEMAND_STRING, REOPTIMIZE, REBALANCE, T_SIMULATION, model.V, model.K, model.D,
-	 100.0*count_served/count_reqs, count_served, count_reqs, 
+	 rate, count_served, count_reqs, 
 	 wt, vt, vsdt, vstt, 100.0*vstt/T_SIMULATION, vrdt, vrtt, 100.0*vrtt/T_SIMULATION, None]
 	writer.writerow(row)
 	f.close()
@@ -208,13 +224,13 @@ if __name__ == "__main__":
 	exe_loc = './osrm-backend-5.6.0/build/osrm-routed'
 	map_loc = './osrm-backend-5.6.0/greater-london-latest.osrm'
 
-	if DIRECT:
-		osrm = None
+	if ROAD_ENABLED:
+		osrm = OsrmEngine(exe_loc, map_loc)
+		osrm.start_server()
+		osrm = OsrmEngine(exe_loc, map_loc)
+		osrm.start_server()
 	else:
-		osrm = OsrmEngine(exe_loc, map_loc)
-		osrm.start_server()
-		osrm = OsrmEngine(exe_loc, map_loc)
-		osrm.start_server()
+		osrm = None
 
 	now = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M")
 	env = RebalancingEnv( Model(DEMAND_MARRIX, TOTAL_DEMAND, V=FLEET_SIZE, K=VEH_CAPACITY), penalty=-0 )

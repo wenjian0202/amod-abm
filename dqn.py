@@ -19,14 +19,14 @@ from lib.Demand import *
 from lib.Constants import *
 from lib.Env import *
 
-FLEET_SIZE = 20
+FLEET_SIZE = 810
 VEH_CAPACITY = 4
 
-DEMAND_MARRIX = BAL5
-TOTAL_DEMAND = 100
-DEMAND_STRING = "BAL5"
+DEMAND_MARRIX = BAL20
+TOTAL_DEMAND = 1600
+DEMAND_STRING = "BAL20"
 
-REBALANCE = "dqn"
+REBALANCE = "orp"
 REOPTIMIZE = "no"
 
 IS_ANIMATION = False
@@ -62,7 +62,7 @@ def print_results(model, runtime, now):
 
     print("*"*80)
     print("Scenario: %s" % (DEMAND_STRING))
-    print("Simulation starts at %s, Runtime Time: %d s" % (now, runtime))
+    print("Simulation starts at %s, Runtime Time: %.3f s" % (now, runtime))
     print("System Settings:")
     print("  - Simulation Time: %d s, with warm-up %d s, wrap-up %d s" % (T_SIMULATION, T_WARM_UP, T_WRAP_UP))
     print("  - Fleet Size: %d; Capacity: %d" % (model.V, model.K))
@@ -85,13 +85,13 @@ def print_results(model, runtime, now):
     print("    + vehicle rebalancing time percentage: %.1f%%" % (100.0*vrtt/T_SIMULATION))
     print("*"*80)
 
-    f = open('results.csv', 'a')
-    writer = csv.writer(f)
-    row = [DEMAND_STRING, REOPTIMIZE, REBALANCE, T_SIMULATION, model.V, model.K, model.D,
-     100.0*count_served/count_reqs, count_served, count_reqs, 
-     wt, vt, vsdt, vstt, 100.0*vstt/T_SIMULATION, vrdt, vrtt, 100.0*vrtt/T_SIMULATION, None]
-    writer.writerow(row)
-    f.close()
+    # f = open('results.csv', 'a')
+    # writer = csv.writer(f)
+    # row = [DEMAND_STRING, REOPTIMIZE, REBALANCE, T_SIMULATION, model.V, model.K, model.D,
+    #  100.0*count_served/count_reqs, count_served, count_reqs, 
+    #  wt, vt, vsdt, vstt, 100.0*vstt/T_SIMULATION, vrdt, vrtt, 100.0*vrtt/T_SIMULATION, None]
+    # writer.writerow(row)
+    # f.close()
 
     return [wt, vt, 100.0*vstt/T_SIMULATION, 100.0*vrtt/T_SIMULATION]
 
@@ -312,9 +312,9 @@ if __name__ == "__main__":
                            target_model_update=1e-2, policy=policy, gamma=.80)
             dqn.compile(Adam(lr=0.001, epsilon=0.05, decay=0.0), metrics=['mae'])
 
-            dqn.fit(env, nb_steps=3000, action_repetition=1, visualize=False, verbose=2)
+            # dqn.fit(env, nb_steps=3000, action_repetition=1, visualize=False, verbose=2)
             # dqn.save_weights('dqn_weights_%s.h5f' % (now), overwrite=True)
-            # dqn.load_weights('dqn_weights_BAL5_150.h5f')
+            dqn.load_weights('dqn_weights_BAL5_150.h5f')
 
             # anime = anim(env.shots)
             # anime.save('test.mp4', dpi=300, fps=None, extra_args=['-vcodec', 'libx264'])

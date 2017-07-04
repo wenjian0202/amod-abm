@@ -4,13 +4,16 @@ import json
 import time
 from subprocess import Popen, PIPE
 
+from lib.Constants import *
+
 class OsrmEngine(object):
     """ Class which connects to an osrm-routed executable """
     def __init__(self,
                  exe_loc,
                  map_loc,
                  ghost = '0.0.0.0',
-                 gport = 5000):
+                 gport = 5000,
+                 cst_speed = 6):
         """ Map needs to be pre-processed using osrm-extract and osrm-contract """
         if not os.path.isfile(exe_loc):
             raise Exception("Could not find osrm-routed executable at %s" % exe_loc)
@@ -22,6 +25,7 @@ class OsrmEngine(object):
             self.map_loc = map_loc
         self.ghost = ghost
         self.gport = gport
+        self.cst_speed = cst_speed
         # Remove any open instance
         if self.check_server():
             self.kill_server()
@@ -103,25 +107,37 @@ class OsrmEngine(object):
             return None
     
     def get_distance(self, olng, olat, dlng, dlat):
-        url = self.create_url(olng, olat, dlng, dlat, steps="false", annotations="false")
-        (response, code) = self.call_url(url)
-        if code:
-            return response['routes'][0]['distance']
+        if ROAD_ENABLED:
+            url = self.create_url(olng, olat, dlng, dlat, steps="false", annotations="false")
+            (response, code) = self.call_url(url)
+            if code:
+                return response['routes'][0]['distance']
+            else:
+                return None
         else:
-            return None
+            if MAP_ENABLED:
+                return np.sqrt( (69600 * (lng1-lng2))**2 + (111317 * (lat1-lat2))**2 )
+            else:
+                return np.sqrt( (1000 * (lng1-lng2))**2 + (1000 * (lat1-lat2))**2 )
         
     def get_duration(self, olng, olat, dlng, dlat):
-        url = self.create_url(olng, olat, dlng, dlat, steps="false", annotations="false")
-        (response, code) = self.call_url(url)
-        if code:
-            return response['routes'][0]['duration']
+        if ROAD_ENABLED:
+            url = self.create_url(olng, olat, dlng, dlat, steps="false", annotations="false")
+            (response, code) = self.call_url(url)
+            if code:
+                return response['routes'][0]['duration']
+            else:
+                return None
         else:
-            return None
+            return self.get_distance(olng, olat, dlng, dlat) / self.cst_speed
     
     def get_distance_duration(self, olng, olat, dlng, dlat):
-        url = self.create_url(olng, olat, dlng, dlat, steps="false", annotations="false")
-        (response, code) = self.call_url(url)
-        if code:
-            return (response['routes'][0]['distance'], response['routes'][0]['duration'])
+        if ROAD_ENABLED:
+            url = self.create_url(olng, olat, dlng, dlat, steps="false", annotations="false")
+            (response, code) = self.call_url(url)
+            if code:
+                return (response['routes'][0]['distance'], response['routes'][0]['duration'])
+            else:
+                return None
         else:
-            return None  
+            return (self.get_distance(olng, olat, dlng, dlat), self.get_duration(olng, olat, dlng, dlat))   
