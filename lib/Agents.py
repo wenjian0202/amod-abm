@@ -73,18 +73,20 @@ class Veh(object):
         Ts: accumulated service time traveled
         Dr: accumulated rebalancing distance traveled
         Tr: accumulated rebalancing time traveled
+        Lt: accumulated load, weighed by service time
+        Ld: accumulated load, weighed by service distance
     """ 
     def __init__(self, id, rs, K=4, S=6, lng=0.080444, lat=51.381263, T=0.0):
         self.id = id
         self.idle = True
         self.rebl = False
         self.T = T
-        if DIRECT:
-            self.lng = rs.uniform(-2.5, 2.5)
-            self.lat = rs.uniform(-2.5, 2.5)
+        if MAP_ENABLED:
+            self.lng = lng + rs.normal(0.0, 0.020) 
+            self.lat = lat + rs.normal(0.0, 0.020)
         else:
-            self.lng = lng + rs.normal(0.0, 0.030) 
-            self.lat = lat + rs.normal(0.0, 0.030)
+            self.lng = rs.uniform(-2.5, 2.5)
+            self.lat = rs.uniform(-2.5, 2.5) 
         self.tlng = lng
         self.tlat = lat
         self.K = K
@@ -98,6 +100,8 @@ class Veh(object):
         self.Ts = 0.0
         self.Dr = 0.0
         self.Tr = 0.0
+        self.Lt = 0.0
+        self.Ld = 0.0
         
     def get_location(self):
         return (self.lng, self.lat)
@@ -108,19 +112,13 @@ class Veh(object):
     def jump_to_location(self, lng, lat):
         self.lng = lng
         self.lat = lat
-
-    def get_direct_distance(self, lng1, lat1, lng2, lat2):
-        if DIRECT:
-            return np.sqrt( (1000 * (lng1-lng2))**2 + (1000 * (lat1-lat2))**2 )
-        else:
-            return np.sqrt( (69600 * (lng1-lng2))**2 + (111317 * (lat1-lat2))**2 )
         
-    def build_route(self, osrm, route):
+    def build_route(self, osrm, route, reqs=None, T=None):
         if len(route) == 0:
             return 
         self.clear_route()
         for (rid, pod, tlng, tlat) in route:
-            self.add_leg(osrm, rid, pod, tlng, tlat)
+            self.add_leg(osrm, rid, pod, tlng, tlat, reqs, T)
         
     def clear_route(self):
         self.route.clear()
@@ -130,14 +128,8 @@ class Veh(object):
         self.tlng = self.lng
         self.tlat = self.lat
     
-    def add_leg(self, osrm, rid, pod, tlng, tlat):
-        if DIRECT:
-            dis = self.get_direct_distance(self.tlng, self.tlat, tlng, tlat)
-            dur = dis / self.S
-            leg = Leg(rid, pod, tlng, tlat, dis, dur, steps=[])
-            leg.steps.append(Step(dis, dur, [[self.tlng, self.tlat],[tlng, tlat]]))
-            self.route.append(leg)
-        else:
+    def add_leg(self, osrm, rid, pod, tlng, tlat, reqs, T):
+        if ROAD_ENABLED:
             out = osrm.get_routing(self.tlng, self.tlat, tlng, tlat)
             assert len(out['legs']) == 1
             leg = Leg(rid, pod, tlng, tlat, 
@@ -149,7 +141,17 @@ class Veh(object):
                 leg.steps.append(step)
             assert np.isclose(t_leg, leg.t)
             assert len(step.geo) == 2
+            assert leg.steps[-1].t == 0
             assert step.geo[0] == step.geo[1]
+            if pod == 1:
+                if T+self.t+leg.t < reqs[rid].Cep:
+                    leg.steps[-1].t = reqs[rid].Cep - (T+self.t+leg.t)
+                    leg.t += leg.steps[-1].t
+            self.route.append(leg)
+        else:
+            (dis, dur) = get_distance_duration(self.tlng, self.tlat, tlng, tlat)
+            leg = Leg(rid, pod, tlng, tlat, dis, dur, steps=[])
+            leg.steps.append(Step(dis, dur, [[self.tlng, self.tlat],[tlng, tlat]]))
             self.route.append(leg)
         self.tlng = leg.steps[-1].geo[1][0]
         self.tlat = leg.steps[-1].geo[1][1]
@@ -167,9 +169,7 @@ class Veh(object):
             self.t = t
             self.d = d
             return
-        if DIRECT:
-            pass
-        else:
+        if ROAD_ENABLED:
             out = osrm.get_routing(self.lng, self.lat, self.route[0].tlng, self.route[0].tlat)
             assert len(out['legs']) == 1
             leg = Leg(self.route[0].rid, self.route[0].pod, self.route[0].tlng, self.route[0].tlat, 
@@ -184,6 +184,8 @@ class Veh(object):
             assert step.geo[0] == step.geo[1]
             self.route.popleft()
             self.route.appendleft(leg)
+        else:
+            pass
         n = self.n
         for leg in self.route:
             t += leg.t
@@ -242,6 +244,8 @@ class Veh(object):
                     self.Ds += leg.d if leg.rid != -1 else 0
                     self.Tr += leg.t if leg.rid == -1 else 0
                     self.Dr += leg.d if leg.rid == -1 else 0
+                    self.Lt += leg.t * self.n if leg.rid != -1 else 0
+                    self.Ld += leg.d * self.n if leg.rid != -1 else 0
                 self.jump_to_location(leg.tlng, leg.tlat)
                 self.n += leg.pod
                 done.append( (leg.rid, leg.pod, self.T) )
@@ -257,6 +261,9 @@ class Veh(object):
                             self.Ds += step.d if leg.rid != -1 else 0
                             self.Tr += step.t if leg.rid == -1 else 0
                             self.Dr += step.d if leg.rid == -1 else 0
+                            self.Lt += step.t * self.n if leg.rid != -1 else 0
+                            self.Ld += step.d * self.n if leg.rid != -1 else 0
+                        self.jump_to_location(leg.tlng, leg.tlat)
                         self.pop_step()
                         if len(leg.steps) == 0:
                             # corner case: leg.t extremely small, but still larger than dT
@@ -272,6 +279,8 @@ class Veh(object):
                             self.Ds += step.d * pct if leg.rid != -1 else 0
                             self.Tr += dT if leg.rid == -1 else 0
                             self.Dr += step.d * pct if leg.rid == -1 else 0
+                            self.Lt += dT * self.n if leg.rid != -1 else 0
+                            self.Ld += step.d * pct * self.n if leg.rid != -1 else 0
                         self.cut_step(pct)
                         self.jump_to_location(step.geo[0][0], step.geo[0][1])
                         self.T = T
@@ -341,25 +350,28 @@ class Veh(object):
         
     def cut_step(self, pct):
         step = self.route[0].steps[0]
-        dis = 0.0
-        sega = step.geo[0]
-        for segb in step.geo[1:]:
-            dis += np.sqrt( (sega[0] - segb[0])**2 + (sega[1] - segb[1])**2)
-            sega = segb
-        dis_ = 0.0
-        _dis = 0.0
-        sega = step.geo[0]
-        for segb in step.geo[1:]:
-            _dis = np.sqrt( (sega[0] - segb[0])**2 + (sega[1] - segb[1])**2)
-            dis_ += _dis
-            if dis_ / dis > pct:
-                break
-            sega = segb
-        while step.geo[0] != sega:
-            step.geo.pop(0)
-        _pct = (pct * dis - dis_ + _dis) / _dis       
-        step.geo[0][0] = sega[0] + _pct * (segb[0] - sega[0])
-        step.geo[0][1] = sega[1] + _pct * (segb[1] - sega[1])     
+        if step.d == 0:
+            _pct = pct
+        else:
+            dis = 0.0
+            sega = step.geo[0]
+            for segb in step.geo[1:]:
+                dis += np.sqrt( (sega[0] - segb[0])**2 + (sega[1] - segb[1])**2)
+                sega = segb
+            dis_ = 0.0
+            _dis = 0.0
+            sega = step.geo[0]
+            for segb in step.geo[1:]:
+                _dis = np.sqrt( (sega[0] - segb[0])**2 + (sega[1] - segb[1])**2)
+                dis_ += _dis
+                if dis_ / dis > pct:
+                    break
+                sega = segb
+            while step.geo[0] != sega:
+                step.geo.pop(0)
+            _pct = (pct * dis - dis_ + _dis) / _dis       
+            step.geo[0][0] = sega[0] + _pct * (segb[0] - sega[0])
+            step.geo[0][1] = sega[1] + _pct * (segb[1] - sega[1])     
         self.t -= step.t * pct
         self.d -= step.d * pct
         self.route[0].t -= step.t * pct
@@ -368,25 +380,26 @@ class Veh(object):
         self.route[0].steps[0].d -= step.d * pct  
 
     def cut_fake_step(self, step, pct):
-        dis = 0.0
-        sega = step.geo[0]
-        for segb in step.geo[1:]:
-            dis += np.sqrt( (sega[0] - segb[0])**2 + (sega[1] - segb[1])**2)
-            sega = segb
-        dis_ = 0.0
-        _dis = 0.0
-        sega = step.geo[0]
-        for segb in step.geo[1:]:
-            _dis = np.sqrt( (sega[0] - segb[0])**2 + (sega[1] - segb[1])**2)
-            dis_ += _dis
-            if dis_ / dis > pct:
-                break
-            sega = segb
-        while step.geo[0] != sega:
-            step.geo.pop(0)
-        _pct = (pct * dis - dis_ + _dis) / _dis       
-        step.geo[0][0] = sega[0] + _pct * (segb[0] - sega[0])
-        step.geo[0][1] = sega[1] + _pct * (segb[1] - sega[1])     
+        if step.d != 0:
+            dis = 0.0
+            sega = step.geo[0]
+            for segb in step.geo[1:]:
+                dis += np.sqrt( (sega[0] - segb[0])**2 + (sega[1] - segb[1])**2)
+                sega = segb
+            dis_ = 0.0
+            _dis = 0.0
+            sega = step.geo[0]
+            for segb in step.geo[1:]:
+                _dis = np.sqrt( (sega[0] - segb[0])**2 + (sega[1] - segb[1])**2)
+                dis_ += _dis
+                if dis_ / dis > pct:
+                    break
+                sega = segb
+            while step.geo[0] != sega:
+                step.geo.pop(0)
+            _pct = (pct * dis - dis_ + _dis) / _dis       
+            step.geo[0][0] = sega[0] + _pct * (segb[0] - sega[0])
+            step.geo[0][1] = sega[1] + _pct * (segb[1] - sega[1])     
     
     def draw(self):
         color = "0.50"
@@ -435,26 +448,35 @@ class Req(object):
         olat: origin lngitude
         dlng: destination longtitude
         dlat: destination lngitude
+        Ts: shortest travel time
+        OnD: true if on-demand, false if in-advance
+        Cep: constraint - earliest pickup
         Clp: constraint - latest pickup
         Cld: constraint - latest dropoff
         Tp: pickup time
         Td: dropoff time
+        D: detour factor
     """
-    def __init__(self, osrm, id, Tr, olng=0.115662, olat=51.374282, dlng=0.089282, dlat=51.350675):
+    def __init__(self, osrm, id, Tr, olng=0.115662, olat=51.374282, dlng=0.089282, dlat=51.350675, OnD=True):
         self.id = id
         self.Tr = Tr
         self.olng = olng
         self.olat = olat
         self.dlng = dlng
-        self.dlat = dlat 
-        if DIRECT:
-            self.Clp = np.inf
-            self.Cld = np.inf
-        else:
+        self.dlat = dlat
+        self.Ts = osrm.get_duration(olng, olat, dlng, dlat)
+        self.OnD = OnD
+        if self.OnD:
+            self.Cep = Tr
             self.Clp = Tr + MAX_WAIT
-            self.Cld = self.Clp + MAX_DETOUR * osrm.get_duration(olng, olat, dlng, dlat)
+            self.Cld = None
+        else:
+            self.Cep = Tr + T_ADVANCE
+            self.Clp = None
+            self.Cld = self.Cep + MAX_DETOUR * self.Ts
         self.Tp = -1.0
         self.Td = -1.0
+        self.D = 0.0
     
     def get_origin(self):
         return (self.olng, self.olat)
@@ -514,13 +536,14 @@ class Model(object):
         
     def generate_request(self, osrm):
         dt = 3600.0/self.D * self.rs1.exponential()
+        OnD = False if self.rs1.rand() < 0.3 else True
         rand = self.rs1.rand()
         for m in self.M:
             if m[5] > rand:
                 req = Req(osrm, 
                           0 if self.N == 0 else self.reqs[-1].id+1,
                           dt if self.N == 0 else self.reqs[-1].Tr+dt,
-                          m[0], m[1], m[2], m[3])
+                          m[0], m[1], m[2], m[3], OnD=OnD)
                 break
         return req
 
@@ -554,7 +577,8 @@ class Model(object):
                     self.reqs[rid].Tp = t
                 elif pod == -1:
                     self.reqs[rid].Td = t
-            veh.update_cost_after_move(osrm)
+                    self.reqs[rid].D = (self.reqs[rid].Td - self.reqs[rid].Tp)/self.reqs[rid].Ts
+            # veh.update_cost_after_move(osrm)
         self.generate_requests_to_time(osrm, T)
         print(self)
         self.assign(osrm, T)
@@ -574,14 +598,16 @@ class Model(object):
         l = len(self.queue)
         for i in range(l):
             req = self.queue.popleft()
-            if not self.insert_heuristics(osrm, req):
+            if not self.insert_heuristics(osrm, req, T):
                 self.rejs.append(req)
 
     def rebalance_sar(self, osrm):
         Nx = 5
         Ny = 5
-        Ex = 0.02
-        Ey = 0.015
+        # Ex = 0.02
+        # Ey = 0.015
+        Ex = 0.5
+        Ey = 0.5
         for veh in self.vehs:
             if veh.idle:
                 veh.clear_route()
@@ -604,6 +630,12 @@ class Model(object):
         Ny = 10
         Ex = 0.02
         Ey = 0.015
+        # Wx = -10
+        # Wy = -10
+        # Nx = 40
+        # Ny = 40
+        # Ex = 0.5
+        # Ey = 0.5
         d = np.zeros((Ny,Nx))
         c = np.zeros((Ny,Nx,2))
         v = np.zeros((Ny,Nx))
@@ -662,10 +694,7 @@ class Model(object):
             vid = None
             for vid_, veh in enumerate(self.vehs):
                 if veh.idle and not veh.rebl:
-                    if DIRECT:
-                        dis_ = veh.get_direct_distance(veh.lng, veh.lat, c[i][j][0], c[i][j][1])
-                    else:
-                        dis_ = osrm.get_distance(veh.lng, veh.lat, c[i][j][0], c[i][j][1])
+                    dis_ = osrm.get_distance(veh.lng, veh.lat, c[i][j][0], c[i][j][1])
                     if dis_ < dis:
                         dis = dis_
                         vid = vid_
@@ -695,6 +724,8 @@ class Model(object):
         Ny = 5
         Ex = 0.02
         Ey = 0.015
+        # Ex = 0.5
+        # Ey = 0.5
         for veh in self.vehs:
             if veh.idle:
                 veh.clear_route()
@@ -825,7 +856,7 @@ class Model(object):
         veh.build_route(osrm, route)
         veh.update_cost_after_build()
         
-    def insert_heuristics(self, osrm, req):
+    def insert_heuristics(self, osrm, req, T):
         dc_ = np.inf
         veh_ = None
         route_ = None
@@ -855,7 +886,7 @@ class Model(object):
                 if viol == 2:
                     break
         if veh_ != None:
-            veh_.build_route(osrm, route_)
+            veh_.build_route(osrm, route_, self.reqs, T)
             veh_.update_cost_after_build()
             print("    Insertion Heuristics: veh %d is assigned to req %d" % (veh_.id, req.id) )
             return True
@@ -1000,7 +1031,7 @@ class Model(object):
                     route_ = copy.deepcopy(route)
                 route.pop(j)
                 route.pop(i)
-                if viol > 0:
+                if viol in [1,2,3]:
                     break
             if viol == 2:
                 break
@@ -1037,15 +1068,20 @@ class Model(object):
                 return False, None, 1 # over capacity
         n = veh.n
         for (rid, pod, tlng, tlat) in route:
-            dt = 0
-            if DIRECT:
-                dt = veh.get_direct_distance(lng, lat, tlng, tlat) / veh.S
-            else:
-                dt = osrm.get_duration(lng, lat, tlng, tlat)
+            req_ = self.reqs[rid]
+            dt = osrm.get_duration(lng, lat, tlng, tlat)
             t += dt
-            if pod == 1 and T + t > self.reqs[rid].Clp:
-                return False, None, 2 if rid == req.id else 0 # late pickup 
-            elif pod == -1 and T + t > self.reqs[rid].Cld:
+            if pod == 1:
+                if req_.OnD:
+                    if T + t > req_.Clp:
+                        return False, None, 2 if rid == req.id else 0 # late pickup
+                    else:
+                        req_.Cld = T + t + MAX_DETOUR * req_.Ts
+                else:
+                    if T + t < req_.Cep:
+                        dt += req_.Cep - T - t
+                        t += req_.Cep - T - t
+            elif pod == -1 and T + t > req_.Cld:
                 return False, None, 3 if rid == req.id else 0 # late dropoff
             c += n * dt * COEF_INVEH
             n += pod
