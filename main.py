@@ -23,32 +23,55 @@ FLEET_SIZE = 20
 VEH_CAPACITY = 4
 
 DEMAND_MARRIX = M_35
-TOTAL_DEMAND = 100
+TOTAL_DEMAND = D_35/10
 DEMAND_STRING = "ASC35"
 
 REBALANCE = "orp"
 REOPTIMIZE = "no"
 
-IS_ANIMATION = True
+IS_ANIMATION = False
 
 def print_results(model, runtime, now):
 	count_reqs = 0
+	count_reqs_ond = 0
+	count_reqs_adv = 0
 	count_served = 0
-	wt = 0.0
+	count_served_ond = 0
+	count_served_adv = 0
+	wt_ond = 0.0
+	wt_adv = 0.0
 	vt = 0.0
 	df = 0.0
 	for req in model.reqs:
-		if req.Tr >= T_WARM_UP and req.Tr <= T_WARM_UP+T_SIMULATION:
+		if req.Cep >= T_WARM_UP and req.Cep <= T_WARM_UP+T_SIMULATION:
 			count_reqs += 1
+			count_reqs_ond += 1 if req.OnD else 0
+			count_reqs_adv += 0 if req.OnD else 1
 			if not np.isclose(req.Td, -1.0):
 				count_served += 1
-				wt += (req.Tp - req.Tr)
+				count_served_ond += 1 if req.OnD else 0
+				count_served_adv += 0 if req.OnD else 1
+				wt_ond += (req.Tp - req.Cep) if req.OnD else 0
+				wt_adv += (req.Tp - req.Cep) if not req.OnD else 0
 				vt += (req.Td - req.Tp)
 				df += req.D
 	if not count_served == 0:
-		wt /= count_served
 		vt /= count_served
 		df /= count_served
+	if not count_served_ond == 0:
+		wt_ond /= count_served_ond
+	if not count_served_adv == 0:	
+		wt_adv /= count_served_adv
+
+	rate = 0.0
+	rate_ond = 0.0
+	rate_adv = 0.0
+	if not count_reqs == 0:
+		rate = 100.0*count_served/count_reqs
+	if not count_reqs_ond == 0:
+		rate_ond = 100.0*count_served_ond/count_reqs_ond
+	if not count_reqs_adv == 0:
+		rate_adv = 100.0*count_served_adv/count_reqs_adv
 	
 	vstt = 0.0
 	vsdt = 0.0
@@ -70,10 +93,6 @@ def print_results(model, runtime, now):
 	ltt /= model.V
 	ldt /= model.V
 
-	rate = 0.0
-	if not count_reqs == 0:
-		rate = 100.0*count_served/count_reqs
-
 	print("*"*80)
 	print("scenario: %s" % (DEMAND_STRING))
 	print("simulation starts at %s, runtime time: %d s" % (now, runtime))
@@ -86,9 +105,9 @@ def print_results(model, runtime, now):
 	print("  - rebalancing policy: %s, interval: %.1f s" % (REBALANCE, INT_REBL))
 	print("simulation results:")
 	print("  - requests:")
-	print("    + service rate: %.1f%% (%d/%d)" % (
-		rate, count_served, count_reqs))
-	print("    + wait time: %.1f s" % (wt))
+	print("    + service rate: %.1f%% (%d/%d)" % (rate, count_served, count_reqs))
+	print("      - of which on-demand requests: %.1f%% (%d/%d), wait time: %.1f s" % (rate_ond, count_served_ond, count_reqs_ond, wt_ond))
+	print("      - of which in-advance requests: %.1f%% (%d/%d), wait time: %.1f s" % (rate_adv, count_served_adv, count_reqs_adv, wt_adv))
 	print("    + in-vehicle time: %.1f s" % (vt))
 	print("    + detour factor: %.2f" % (df))
 	print("  - vehicles:")
@@ -98,18 +117,18 @@ def print_results(model, runtime, now):
 	print("    + vehicle rebalancing time travelled: %.1f s" % (vrtt))
 	print("    + vehicle rebalancing distance travelled: %.1f m" % (vrdt))
 	print("    + vehicle rebalancing time percentage: %.1f%%" % (100.0*vrtt/T_SIMULATION))
-	print("    + vehicle average load: %.2f (time weighted), %.2f (distance weighted)" % (ltt, ldt))
+	print("    + vehicle average load: %.2f (distance weighted), %.2f (time weighted)" % (ldt, ltt))
 	print("*"*80)
 
 	f = open('results.csv', 'a')
 	writer = csv.writer(f)
 	row = [DEMAND_STRING, REOPTIMIZE, REBALANCE, T_SIMULATION, model.V, model.K, model.D,
-	 rate, count_served, count_reqs, 
-	 wt, vt, vsdt, vstt, 100.0*vstt/T_SIMULATION, vrdt, vrtt, 100.0*vrtt/T_SIMULATION, None]
+	 rate, count_served, count_reqs, rate_ond, count_served_ond, count_reqs_ond, rate_adv, count_served_adv, count_reqs_adv,
+	 wt_ond, wt_adv, vt, df, vsdt, vstt, 100.0*vstt/T_SIMULATION, vrdt, vrtt, 100.0*vrtt/T_SIMULATION, ldt, ltt, None]
 	writer.writerow(row)
 	f.close()
 
-	return [wt, vt, 100.0*vstt/T_SIMULATION, 100.0*vrtt/T_SIMULATION]
+	return [wt_ond, wt_adv, vt, df, 100.0*vstt/T_SIMULATION, 100.0*vrtt/T_SIMULATION, ltt]
 
 def print_summary(results):
 	print("*"*80)
