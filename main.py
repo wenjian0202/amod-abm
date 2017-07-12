@@ -19,12 +19,12 @@ from lib.Demand import *
 from lib.Constants import *
 from lib.Env import *
 
-FLEET_SIZE = 20
+FLEET_SIZE = 140
 VEH_CAPACITY = 4
 
-DEMAND_MARRIX = M_35
-TOTAL_DEMAND = D_35/10
-DEMAND_STRING = "ASC35"
+DEMAND_MARRIX = M_AVPT400
+TOTAL_DEMAND = D_AVPT400
+DEMAND_STRING = "AVPT400"
 
 REBALANCE = "orp"
 REOPTIMIZE = "no"
@@ -85,7 +85,8 @@ def print_results(model, runtime, now):
 		vrtt += veh.Tr
 		vrdt += veh.Dr
 		ltt += veh.Lt / T_SIMULATION
-		ldt += veh.Ld / (veh.Ds + veh.Dr)
+		if not veh.Ds + veh.Dr == 0:
+			ldt += veh.Ld / (veh.Ds + veh.Dr)
 	vstt /= model.V
 	vsdt /= model.V
 	vrtt /= model.V
@@ -127,6 +128,16 @@ def print_results(model, runtime, now):
 	 wt_ond, wt_adv, vt, df, vsdt, vstt, 100.0*vstt/T_SIMULATION, vrdt, vrtt, 100.0*vrtt/T_SIMULATION, ldt, ltt, None]
 	writer.writerow(row)
 	f.close()
+
+	f = open('requests.csv', 'w')
+	writer = csv.writer(f)
+	writer.writerow(["id", "olng", "olat", "dlng", "dlat", "Ts", "OnD", "Tr", "Cep", "Tp", "Td", "WT", "VT", "D"])
+	for req in model.reqs:
+		if req.Cep >= T_WARM_UP and req.Cep <= T_WARM_UP+T_SIMULATION:
+			row = [req.id, req.olng, req.olat, req.dlng, req.dlat, req.Ts, req.OnD, req.Tr, req.Cep, req.Tp, req.Td,
+			 req.Tp-req.Cep if req.Tp >= 0 else -1, req.Td-req.Tp if req.Td >= 0 else -1, req.D]
+			writer.writerow(row)
+	f.close()	
 
 	return [wt_ond, wt_adv, vt, df, 100.0*vstt/T_SIMULATION, 100.0*vrtt/T_SIMULATION, ltt]
 

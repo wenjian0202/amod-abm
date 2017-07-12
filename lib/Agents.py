@@ -82,8 +82,8 @@ class Veh(object):
         self.rebl = False
         self.T = T
         if MAP_ENABLED:
-            self.lng = lng + rs.normal(0.0, 0.020) 
-            self.lat = lat + rs.normal(0.0, 0.020)
+            self.lng = lng + rs.uniform(-0.05, 0.05) 
+            self.lat = lat + rs.uniform(-0.03, 0.03)
         else:
             self.lng = rs.uniform(-2.5, 2.5)
             self.lat = rs.uniform(-2.5, 2.5) 
@@ -141,12 +141,13 @@ class Veh(object):
                 leg.steps.append(step)
             assert np.isclose(t_leg, leg.t)
             assert len(step.geo) == 2
-            assert leg.steps[-1].t == 0
+            # assert np.isclose(leg.steps[-1].t, 0)
             assert step.geo[0] == step.geo[1]
             if pod == 1:
                 if T+self.t+leg.t < reqs[rid].Cep:
-                    leg.steps[-1].t = reqs[rid].Cep - (T+self.t+leg.t)
-                    leg.t += leg.steps[-1].t
+                    wait = reqs[rid].Cep - (T+self.t+leg.t)
+                    leg.steps[-1].t += wait
+                    leg.t += wait
             self.route.append(leg)
         else:
             (dis, dur) = get_distance_duration(self.tlng, self.tlat, tlng, tlat)
@@ -536,10 +537,12 @@ class Model(object):
         
     def generate_request(self, osrm):
         dt = 3600.0/self.D * self.rs1.exponential()
-        OnD = False if self.rs1.rand() < 0.3 else True
         rand = self.rs1.rand()
         for m in self.M:
             if m[5] > rand:
+                OnD = True
+                if m[1] < 51.35:
+                    OnD = False if self.rs1.rand() < 0.5 else True
                 req = Req(osrm, 
                           0 if self.N == 0 else self.reqs[-1].id+1,
                           dt if self.N == 0 else self.reqs[-1].Tr+dt,
