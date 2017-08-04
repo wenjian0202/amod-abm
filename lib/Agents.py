@@ -677,7 +677,7 @@ class Model(object):
                             elif n == 2:
                                 s[i][j] += 0.2
                             elif n == 3:
-                                s[i][j] += 0.1
+                                s[i][j] += 0.1 
                             else:
                                 s[i][j] += 0.0
                             break
