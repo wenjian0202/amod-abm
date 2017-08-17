@@ -81,12 +81,8 @@ class Veh(object):
         self.idle = True
         self.rebl = False
         self.T = T
-        if MAP_ENABLED:
-            self.lng = lng + rs.uniform(-0.05, 0.05) 
-            self.lat = lat + rs.uniform(-0.03, 0.03)
-        else:
-            self.lng = rs.uniform(-2.5, 2.5)
-            self.lat = rs.uniform(-2.5, 2.5) 
+        self.lng = lng + rs.uniform(-0.05, 0.05) 
+        self.lat = lat + rs.uniform(-0.03, 0.03)
         self.tlng = lng
         self.tlat = lat
         self.K = K
@@ -114,11 +110,35 @@ class Veh(object):
         self.lat = lat
         
     def build_route(self, osrm, route, reqs=None, T=None):
-        if len(route) == 0:
-            return 
         self.clear_route()
-        for (rid, pod, tlng, tlat) in route:
-            self.add_leg(osrm, rid, pod, tlng, tlat, reqs, T)
+        if len(route) == 0:
+            self.idle = True
+            self.rebl = False
+            self.t = 0.0
+            self.d = 0.0
+            self.c = 0.0
+            return 
+        else:
+            for (rid, pod, tlng, tlat) in route:
+                self.add_leg(osrm, rid, pod, tlng, tlat, reqs, T)
+        if self.route[0].rid == -1:
+            self.idle = True
+            self.rebl = True
+            self.c = 0.0
+            return
+        else:
+            c = 0.0
+            self.idle = False
+            self.rebl = False
+            t = 0.0
+            n = self.n
+            for leg in self.route:
+                t += leg.t
+                c += n * leg.t * COEF_INVEH
+                n += leg.pod
+                c += t * COEF_WAIT if leg.pod == 1 else 0
+            assert n == 0
+            self.c = c
         
     def clear_route(self):
         self.route.clear()
@@ -130,18 +150,16 @@ class Veh(object):
     
     def add_leg(self, osrm, rid, pod, tlng, tlat, reqs, T):
         if ROAD_ENABLED:
-            out = osrm.get_routing(self.tlng, self.tlat, tlng, tlat)
-            assert len(out['legs']) == 1
+            l = osrm.get_routing(self.tlng, self.tlat, tlng, tlat)
             leg = Leg(rid, pod, tlng, tlat, 
-                      out['legs'][0]['distance'], out['legs'][0]['duration'], steps=[])
+                      l['distance'], l['duration'], steps=[])
             t_leg = 0.0
-            for s in out['legs'][0]['steps']:
+            for s in l['steps']:
                 step = Step(s['distance'], s['duration'], s['geometry']['coordinates'])
                 t_leg += s['duration']
                 leg.steps.append(step)
             assert np.isclose(t_leg, leg.t)
             assert len(step.geo) == 2
-            # assert np.isclose(leg.steps[-1].t, 0)
             assert step.geo[0] == step.geo[1]
             if pod == 1:
                 if T+self.t+leg.t < reqs[rid].Cep:
@@ -150,85 +168,14 @@ class Veh(object):
                     leg.t += wait
             self.route.append(leg)
         else:
-            (dis, dur) = get_distance_duration(self.tlng, self.tlat, tlng, tlat)
-            leg = Leg(rid, pod, tlng, tlat, dis, dur, steps=[])
-            leg.steps.append(Step(dis, dur, [[self.tlng, self.tlat],[tlng, tlat]]))
+            d_, t_ = get_distance_duration(self.tlng, self.tlat, tlng, tlat)
+            leg = Leg(rid, pod, tlng, tlat, d_, t_, steps=[])
+            leg.steps.append(Step(d_, t_, [[self.tlng, self.tlat],[tlng, tlat]]))
             self.route.append(leg)
         self.tlng = leg.steps[-1].geo[1][0]
         self.tlat = leg.steps[-1].geo[1][1]
         self.d += leg.d
         self.t += leg.t
-        
-    def update_cost_after_move(self, osrm):
-        c = 0.0
-        t = 0.0
-        d = 0.0
-        if len(self.route) == 0:
-            self.idle = True
-            self.rebl = False
-            self.c = c
-            self.t = t
-            self.d = d
-            return
-        if ROAD_ENABLED:
-            out = osrm.get_routing(self.lng, self.lat, self.route[0].tlng, self.route[0].tlat)
-            assert len(out['legs']) == 1
-            leg = Leg(self.route[0].rid, self.route[0].pod, self.route[0].tlng, self.route[0].tlat, 
-                      out['legs'][0]['distance'], out['legs'][0]['duration'], steps=[])
-            t_leg = 0.0
-            for s in out['legs'][0]['steps']:
-                step = Step(s['distance'], s['duration'], s['geometry']['coordinates'])
-                t_leg += s['duration']
-                leg.steps.append(step)
-            assert np.isclose(t_leg, leg.t)
-            assert len(step.geo) == 2
-            assert step.geo[0] == step.geo[1]
-            self.route.popleft()
-            self.route.appendleft(leg)
-        else:
-            pass
-        n = self.n
-        for leg in self.route:
-            t += leg.t
-            d += leg.d
-            c += n * leg.t * COEF_INVEH
-            n += leg.pod
-            c += t * COEF_WAIT if leg.pod == 1 else 0
-        assert n == 0
-        self.c = c
-        self.t = t
-        self.d = d
-        if self.route[0].rid == -1:
-            self.idle = True
-            self.rebl = True
-            self.c = 0.0
-        else:
-            self.idle = False
-            self.rebl = False 
-
-    def update_cost_after_build(self):
-        c = 0.0
-        if len(self.route) == 0:
-            self.idle = True
-            self.rebl = False
-            self.c = c
-            return
-        elif self.route[0].rid == -1:
-            self.idle = True
-            self.rebl = True
-            self.c = c
-            return
-        self.idle = False
-        self.rebl = False
-        t = 0.0
-        n = self.n
-        for leg in self.route:
-            t += leg.t
-            c += n * leg.t * COEF_INVEH
-            n += leg.pod
-            c += t * COEF_WAIT if leg.pod == 1 else 0
-        assert n == 0
-        self.c = c
         
     def move_to_time(self, T):
         dT = T - self.T
@@ -328,7 +275,7 @@ class Veh(object):
                             break
                     else:
                         pct = dT / step.t
-                        self.cut_fake_step(step, pct)
+                        self.cut_temp_step(step, pct)
                         lng = step.geo[0][0]
                         lat = step.geo[0][1]
                         return lng, lat, n
@@ -380,7 +327,7 @@ class Veh(object):
         self.route[0].steps[0].t -= step.t * pct
         self.route[0].steps[0].d -= step.d * pct  
 
-    def cut_fake_step(self, step, pct):
+    def cut_temp_step(self, step, pct):
         if step.d != 0:
             dis = 0.0
             sega = step.geo[0]
@@ -549,15 +496,6 @@ class Model(object):
                           m[0], m[1], m[2], m[3], OnD=OnD)
                 break
         return req
-
-    def generate_request_random_seed(self, osrm):
-        dt = 3600.0/self.D * np.random.exponential()
-        rand = np.random.rand()
-        for m in self.M:
-            if m[5] > rand:
-                req = Req(osrm, -1, -1, m[0], m[1], m[2], m[3])
-                break
-        return req
         
     def generate_requests_to_time(self, osrm, T):
         if self.N == 0:
@@ -581,7 +519,6 @@ class Model(object):
                 elif pod == -1:
                     self.reqs[rid].Td = t
                     self.reqs[rid].D = (self.reqs[rid].Td - self.reqs[rid].Tp)/self.reqs[rid].Ts
-            # veh.update_cost_after_move(osrm)
         self.generate_requests_to_time(osrm, T)
         print(self)
         self.assign(osrm, T)
@@ -605,54 +542,35 @@ class Model(object):
                 self.rejs.append(req)
 
     def rebalance_sar(self, osrm):
-        Nx = 5
-        Ny = 5
-        # Ex = 0.02
-        # Ey = 0.015
-        Ex = 0.5
-        Ey = 0.5
         for veh in self.vehs:
             if veh.idle:
                 veh.clear_route()
                 veh.rebl = False
-                [d, v, s], center = self.get_state(veh, Nx, Ny, Ex, Ey)
+                [d, v, s], center = self.get_state(veh)
                 n = np.random.uniform(0, np.sum(d))
                 m = 0
-                for i,j in itertools.product(range(Ny), range(Nx)):
+                for i,j in itertools.product(range(Mlat), range(Mlng)):
                     m += d[i][j]
                     if m > n:
                         break
                 route = [(-1, 0, center[i][j][0], center[i][j][1])]
                 veh.build_route(osrm, route)
-                veh.update_cost_after_build()
 
     def rebalance_orp(self, osrm, T):
-        Wx = -0.02
-        Wy = 51.44
-        Nx = 10
-        Ny = 10
-        Ex = 0.02
-        Ey = 0.015
-        # Wx = -10
-        # Wy = -10
-        # Nx = 40
-        # Ny = 40
-        # Ex = 0.5
-        # Ey = 0.5
-        d = np.zeros((Ny,Nx))
-        c = np.zeros((Ny,Nx,2))
-        v = np.zeros((Ny,Nx))
-        s = np.zeros((Ny,Nx))
-        b = np.zeros((Ny,Nx))
+        d = np.zeros((Nlat, Nlng))
+        c = np.zeros((Nlat, Nlng, 2))
+        v = np.zeros((Nlat, Nlng))
+        s = np.zeros((Nlat, Nlng))
+        b = np.zeros((Nlat, Nlng))
         for m in self.M:
-            for i,j in itertools.product(range(Ny), range(Nx)):
-                if m[1] >= Wy - (i+1)*Ey:
-                    if m[0] <= Wx + (j+1)*Ex:
+            for i,j in itertools.product(range(Nlat), range(Nlng)):
+                if m[1] >= Olat - (i+1)*Elat:
+                    if m[0] <= Olng + (j+1)*Elng:
                         d[i][j] += m[4] * self.D
                         c[i][j][0] += m[0] * m[4] * self.D
                         c[i][j][1] += m[1] * m[4] * self.D
                         break
-        for i,j in itertools.product(range(Ny), range(Nx)):
+        for i,j in itertools.product(range(Nlat), range(Nlng)):
             if d[i][j] != 0:
                 c[i][j][0] /= d[i][j]
                 c[i][j][1] /= d[i][j]
@@ -660,16 +578,16 @@ class Model(object):
             if veh.idle:
                 veh.clear_route()
                 veh.rebl = False
-                for i,j in itertools.product(range(Ny), range(Nx)):
-                    if veh.lat >= Wy - (i+1)*Ey:
-                        if veh.lng <= Wx + (j+1)*Ex:
+                for i,j in itertools.product(range(Nlat), range(Nlng)):
+                    if veh.lat >= Olat - (i+1)*Elat:
+                        if veh.lng <= Olng + (j+1)*Elng:
                             v[i][j] += 1
                             break
             else:
                 lng, lat, n = veh.get_location_at_time(T+INT_REBL)
-                for i,j in itertools.product(range(Ny), range(Nx)):
-                    if lat >= Wy - (i+1)*Ey:
-                        if lng <= Wx + (j+1)*Ex:
+                for i,j in itertools.product(range(Nlat), range(Nlng)):
+                    if lat >= Olat - (i+1)*Elat:
+                        if lng <= Olng + (j+1)*Elng:
                             if n == 0:
                                 s[i][j] += 0.8
                             elif n == 1:
@@ -681,7 +599,7 @@ class Model(object):
                             else:
                                 s[i][j] += 0.0
                             break
-        for i,j in itertools.product(range(Ny), range(Nx)):
+        for i,j in itertools.product(range(Nlat), range(Nlng)):
             if d[i][j] == 0:
                 continue
             lamda = d[i][j] * INT_REBL/3600
@@ -703,10 +621,9 @@ class Model(object):
                         vid = vid_
             route = [(-1, 0, c[i][j][0], c[i][j][1])]
             self.vehs[vid].build_route(osrm, route)
-            self.vehs[vid].update_cost_after_build()
-            for i_, j_ in itertools.product(range(Ny), range(Nx)):
-                if self.vehs[vid].lat >= Wy - (i_+1)*Ey:
-                    if self.vehs[vid].lng <= Wx + (j_+1)*Ex:
+            for i_, j_ in itertools.product(range(Nlat), range(Nlng)):
+                if self.vehs[vid].lat >= Olat - (i_+1)*Elat:
+                    if self.vehs[vid].lng <= Olng + (j_+1)*Elng:
                         v[i_][j_] -= 1
                         break
             s[i][j] += 1
@@ -723,36 +640,34 @@ class Model(object):
         assert np.min(v) == 0
 
     def rebalance_dqn(self, osrm):
-        Nx = 5
-        Ny = 5
-        Ex = 0.02
-        Ey = 0.015
-        # Ex = 0.5
-        # Ey = 0.5
+        Mlng = 5
+        Mlat = 5
+        Elng = 0.02
+        Elat = 0.015
         for veh in self.vehs:
             if veh.idle:
                 veh.clear_route()
                 veh.rebl = False
-                state, center = self.get_state(veh, Nx, Ny, Ex, Ey)
+                state, center = self.get_state(veh)
                 action = self.dqn.forward(state)
-                self.act(osrm, veh, action, center, Nx, Ny, Ex, Ey)
+                self.act(osrm, veh, action, center)
 
-    def get_state(self, veh, Nx, Ny, Ex, Ey):
+    def get_state(self, veh):
         lng = veh.lng
         lat = veh.lat
-        d = np.zeros((Ny,Nx))
-        c = np.zeros((Ny,Nx,2))
-        v = np.zeros((Ny,Nx))
-        s = np.zeros((Ny,Nx))
+        d = np.zeros((Mlat, Mlng))
+        c = np.zeros((Mlat, Mlng,2))
+        v = np.zeros((Mlat, Mlng))
+        s = np.zeros((Mlat, Mlng))
         for m in self.M:
-            for i,j in itertools.product(range(Ny), range(Nx)):
-                if m[1] <= lat + Ny*Ey/2 - i*Ey and m[1] >= lat + Ny*Ey/2 - (i+1)*Ey:
-                    if m[0] >= lng - Nx*Ex/2 + j*Ex and m[0] <= lng - Nx*Ex/2 + (j+1)*Ex:
+            for i,j in itertools.product(range(Mlat), range(Mlng)):
+                if m[1] <= lat + Mlat*Elat/2 - i*Elat and m[1] >= lat + Mlat*Elat/2 - (i+1)*Elat:
+                    if m[0] >= lng - Mlng*Elng/2 + j*Elng and m[0] <= lng - Mlng*Elng/2 + (j+1)*Elng:
                         d[i][j] += m[4] * self.D
                         c[i][j][0] += m[0] * m[4] * self.D
                         c[i][j][1] += m[1] * m[4] * self.D
                         break
-        for i,j in itertools.product(range(Ny), range(Nx)):
+        for i,j in itertools.product(range(Mlat), range(Mlng)):
             if d[i][j] != 0:
                 c[i][j][0] /= d[i][j]
                 c[i][j][1] /= d[i][j]
@@ -761,16 +676,16 @@ class Model(object):
                 c[i][j][1] = False
         for veh_ in self.vehs:
             if veh_.idle:
-                for i,j in itertools.product(range(Ny), range(Nx)):
-                    if veh_.lat <= lat + Ny*Ey/2 - i*Ey and veh_.lat >= lat + Ny*Ey/2 - (i+1)*Ey:
-                        if veh_.lng >= lng - Nx*Ex/2 + j*Ex and veh_.lng <= lng - Nx*Ex/2 + (j+1)*Ex:
+                for i,j in itertools.product(range(Mlat), range(Mlng)):
+                    if veh_.lat <= lat + Mlat*Elat/2 - i*Elat and veh_.lat >= lat + Mlat*Elat/2 - (i+1)*Elat:
+                        if veh_.lng >= lng - Mlng*Elng/2 + j*Elng and veh_.lng <= lng - Mlng*Elng/2 + (j+1)*Elng:
                             v[i][j] += 1
                             break
             else:
                 lng_, lat_, n = veh_.get_location_at_time(self.T+INT_REBL)
-                for i,j in itertools.product(range(Ny), range(Ny)):
-                    if lat_ <= lat + Ny*Ey/2 - i*Ey and lat_ >= lat + Ny*Ey/2 - (i+1)*Ey:
-                        if lng_ >= lng - Nx*Ex/2 + j*Ex and lng_ <= lng - Nx*Ex/2 + (j+1)*Ex:
+                for i,j in itertools.product(range(Mlat), range(Mlat)):
+                    if lat_ <= lat + Mlat*Elat/2 - i*Elat and lat_ >= lat + Mlat*Elat/2 - (i+1)*Elat:
+                        if lng_ >= lng - Mlng*Elng/2 + j*Elng and lng_ <= lng - Mlng*Elng/2 + (j+1)*Elng:
                             if n == 0:
                                 s[i][j] += 0.8
                             elif n == 1:
@@ -784,10 +699,10 @@ class Model(object):
                             break
         return [d,v,s], c
 
-    def act(self, osrm, veh, action, c, Nx, Ny, Ex, Ey):
+    def act(self, osrm, veh, action, c):
         assert veh.idle
-        i = int((Ny-1)/2)
-        j = int((Nx-1)/2)
+        i = int((Mlat-1)/2)
+        j = int((Mlng-1)/2)
         lng = veh.lng
         lat = veh.lat
         if action == 0:
@@ -854,10 +769,7 @@ class Model(object):
                 lat = c[i-2][j][1]
         route = [(-1, 0, lng, lat)]
         # print(lng, lat, action, route)
-        veh.clear_route()
-        veh.rebl = False
         veh.build_route(osrm, route)
-        veh.update_cost_after_build()
         
     def insert_heuristics(self, osrm, req, T):
         dc_ = np.inf
@@ -890,7 +802,6 @@ class Model(object):
                     break
         if veh_ != None:
             veh_.build_route(osrm, route_, self.reqs, T)
-            veh_.update_cost_after_build()
             print("    Insertion Heuristics: veh %d is assigned to req %d" % (veh_.id, req.id) )
             return True
         else:
@@ -965,7 +876,6 @@ class Model(object):
         if success:
             for veh, route in zip(self.vehs, best_routes):
                 veh.build_route(osrm, route[0])
-                veh.update_cost_after_build()
                 if not np.isclose(veh.c, route[1]):
                     pass
 

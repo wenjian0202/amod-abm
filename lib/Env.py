@@ -19,26 +19,23 @@ class RebalancingEnv(gym.Env):
     """
     RebalancingEnv is the environment class for DQN
     Attributes:
-        amod: AMoD system to train
-        N: input grid of N*N cell
-        c: length of the side of the cell
+        model: AMoD system to train
         dT: time interval for training
         penalty: penalty of rebalancing a vehicle
         action_space: action space
         state: the system state
+        center: the centroid of cells
         input_dim: input dimension
     """ 
     def __init__(self, model, penalty=-10):
         self.model = model
         self.shots = []
-        self.N = 5
-        self.E = 0.5
         self.dT = INT_REBL
         self.penalty = penalty
         self.action_space = spaces.Discrete(9)
-        self.state = np.zeros((3,self.N,self.N))
-        self.center = np.zeros((self.N,self.N,2))
-        self.input_dim = 3*self.N*self.N
+        self.state = np.zeros((3, Mlng, Mlat))
+        self.center = np.zeros((Mlng, Mlat, 2))
+        self.input_dim = 3 * Mlng * Mlat
         self.step_count = 0
         self.epi_count = 0
         self.total_reward = 0.0
@@ -90,7 +87,7 @@ class RebalancingEnv(gym.Env):
     
     def act(self, action, vid=-1):
         veh = self.model.vehs[vid]
-        self.model.act(None, veh, action, self.center, self.N, self.N, self.E, self.E)
+        self.model.act(None, veh, action, self.center)
     
     def reset(self):
         self.update_state()
@@ -102,4 +99,4 @@ class RebalancingEnv(gym.Env):
     
     def update_state(self, vid=-1):
         veh = self.model.vehs[vid]
-        self.state, self.center = self.model.get_state(veh, self.N, self.N, self.E, self.E)
+        self.state, self.center = self.model.get_state(veh)

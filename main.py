@@ -20,17 +20,17 @@ from lib.Demand2 import *
 from lib.Constants import *
 from lib.Env import *
 
-FLEET_SIZE = 60
+FLEET_SIZE = 40
 VEH_CAPACITY = 4
 
-DEMAND_MATRIX = M_AVPT550_
-TOTAL_DEMAND = D_AVPT550_
+DEMAND_MATRIX = M_AVPT550
+TOTAL_DEMAND = D_AVPT550
 DEMAND_STRING = "AVPT550"
 
-REBALANCE = "orp"
+REBALANCE = "sar"
 REOPTIMIZE = "no"
 
-IS_ANIMATION = False
+IS_ANIMATION = True
 
 def print_results(model, runtime, now):
 	count_reqs = 0
@@ -285,8 +285,8 @@ if __name__ == "__main__":
 	dqn.load_weights('dqn_weights_BAL5_150.h5f')
 
 	results = []
-	for FLEET_SIZE in [68]:
-		for ii in range(5):
+	for i in range(1):
+		for ii in range(1):
 			shots = []
 			now = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M")
 			model = Model(DEMAND_MATRIX, TOTAL_DEMAND, dqn=dqn, V=FLEET_SIZE, K=VEH_CAPACITY, rebl=REBALANCE, reopt=REOPTIMIZE)
