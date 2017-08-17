@@ -102,7 +102,7 @@ class OsrmEngine(object):
         url = self.create_url(olng, olat, dlng, dlat, steps="true", annotations="false")
         (response, code) = self.call_url(url)
         if code:
-            return response['routes'][0]
+            return response['routes'][0]['legs'][0]
         else:
             return None
     
@@ -115,10 +115,7 @@ class OsrmEngine(object):
             else:
                 return None
         else:
-            if MAP_ENABLED:
-                return np.sqrt( (69600 * (lng1-lng2))**2 + (111317 * (lat1-lat2))**2 )
-            else:
-                return np.sqrt( (1000 * (lng1-lng2))**2 + (1000 * (lat1-lat2))**2 )
+            return np.sqrt( (69600 * (lng1-lng2))**2 + (111317 * (lat1-lat2))**2 )
         
     def get_duration(self, olng, olat, dlng, dlat):
         if ROAD_ENABLED:
@@ -140,4 +137,4 @@ class OsrmEngine(object):
             else:
                 return None
         else:
-            return (self.get_distance(olng, olat, dlng, dlat), self.get_duration(olng, olat, dlng, dlat))   
+            return self.get_distance(olng, olat, dlng, dlat), self.get_duration(olng, olat, dlng, dlat) 
