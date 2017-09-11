@@ -1,3 +1,7 @@
+"""
+environment class for the deep Q network (DQN)
+"""
+
 from lib.Agents import *
 from lib.Demand import *
 from lib.Constants import *
@@ -29,7 +33,7 @@ class RebalancingEnv(gym.Env):
     """ 
     def __init__(self, model, penalty=-10):
         self.model = model
-        self.shots = []
+        self.frames = []
         self.dT = INT_REBL
         self.penalty = penalty
         self.action_space = spaces.Discrete(9)
@@ -51,7 +55,7 @@ class RebalancingEnv(gym.Env):
         while T < T_:
             T += INT_ASSIGN
             self.model.dispatch_at_time(None, T)
-            # self.shots.append(copy.deepcopy(self.model.vehs))
+            # self.frames.append(copy.deepcopy(self.model.vehs))
             model_.dispatch_at_time(None, T)
             if not self.is_vehicle_idle():
                 reward += model_.get_total_cost() - self.model.get_total_cost()
@@ -60,14 +64,14 @@ class RebalancingEnv(gym.Env):
         while T < T_:
             T += INT_ASSIGN
             self.model.dispatch_at_time(None, T)
-            # self.shots.append(copy.deepcopy(self.model.vehs))  
+            # self.frames.append(copy.deepcopy(self.model.vehs))  
         while not self.is_vehicle_idle():
             T = self.model.T
             T_ = self.model.T+INT_REBL
             while T < T_:
                 T += INT_ASSIGN
                 self.model.dispatch_at_time(None, T)
-                # self.shots.append(copy.deepcopy(self.model.vehs))
+                # self.frames.append(copy.deepcopy(self.model.vehs))
         if flag:
             self.epi_count += 1
             self.total_reward += reward
