@@ -1,3 +1,7 @@
+"""
+multiple classes for the AMoD system
+"""
+
 import numpy as np
 import copy
 import math
@@ -149,7 +153,7 @@ class Veh(object):
         self.tlat = self.lat
     
     def add_leg(self, osrm, rid, pod, tlng, tlat, reqs, T):
-        if ROAD_ENABLED:
+        if IS_ROAD_ENABLED:
             l = osrm.get_routing(self.tlng, self.tlat, tlng, tlat)
             leg = Leg(rid, pod, tlng, tlat, 
                       l['distance'], l['duration'], steps=[])
@@ -187,7 +191,7 @@ class Veh(object):
             if leg.t < dT:
                 dT -= leg.t
                 self.T += leg.t
-                if self.T >= T_WARM_UP and self.T <= T_WARM_UP+T_SIMULATION:
+                if self.T >= T_WARM_UP and self.T <= T_WARM_UP+T_STUDY:
                     self.Ts += leg.t if leg.rid != -1 else 0
                     self.Ds += leg.d if leg.rid != -1 else 0
                     self.Tr += leg.t if leg.rid == -1 else 0
@@ -204,7 +208,7 @@ class Veh(object):
                     if step.t < dT:
                         dT -= step.t
                         self.T += step.t
-                        if self.T >= T_WARM_UP and self.T <= T_WARM_UP+T_SIMULATION:
+                        if self.T >= T_WARM_UP and self.T <= T_WARM_UP+T_STUDY:
                             self.Ts += step.t if leg.rid != -1 else 0
                             self.Ds += step.d if leg.rid != -1 else 0
                             self.Tr += step.t if leg.rid == -1 else 0
@@ -222,7 +226,7 @@ class Veh(object):
                             break
                     else:
                         pct = dT / step.t
-                        if self.T >= T_WARM_UP and self.T <= T_WARM_UP+T_SIMULATION:
+                        if self.T >= T_WARM_UP and self.T <= T_WARM_UP+T_STUDY:
                             self.Ts += dT if leg.rid != -1 else 0
                             self.Ds += step.d * pct if leg.rid != -1 else 0
                             self.Tr += dT if leg.rid == -1 else 0
@@ -419,7 +423,7 @@ class Req(object):
             self.Clp = Tr + MAX_WAIT
             self.Cld = None
         else:
-            self.Cep = Tr + T_ADVANCE
+            self.Cep = Tr + T_ADV_REQ
             self.Clp = None
             self.Cld = self.Cep + MAX_DETOUR * self.Ts
         self.Tp = -1.0
@@ -523,7 +527,7 @@ class Model(object):
         print(self)
         self.assign(osrm, T)
         if T % INT_REOPT == 0:
-            if self.reopt == "sa":
+            if self.reopt == "hsa":
                 self.simulated_annealing(osrm)
         if T % INT_REBL == 0:
             if self.rebl == "sar":
@@ -564,7 +568,7 @@ class Model(object):
         b = np.zeros((Nlat, Nlng))
         for m in self.M:
             for i,j in itertools.product(range(Nlat), range(Nlng)):
-                if m[1] >= Olat - (i+1)*Elat:
+                if m[1] >= Dlat - (i+1)*Elat:
                     if m[0] <= Olng + (j+1)*Elng:
                         d[i][j] += m[4] * self.D
                         c[i][j][0] += m[0] * m[4] * self.D
@@ -579,14 +583,14 @@ class Model(object):
                 veh.clear_route()
                 veh.rebl = False
                 for i,j in itertools.product(range(Nlat), range(Nlng)):
-                    if veh.lat >= Olat - (i+1)*Elat:
+                    if veh.lat >= Dlat - (i+1)*Elat:
                         if veh.lng <= Olng + (j+1)*Elng:
                             v[i][j] += 1
                             break
             else:
                 lng, lat, n = veh.get_location_at_time(T+INT_REBL)
                 for i,j in itertools.product(range(Nlat), range(Nlng)):
-                    if lat >= Olat - (i+1)*Elat:
+                    if lat >= Dlat - (i+1)*Elat:
                         if lng <= Olng + (j+1)*Elng:
                             if n == 0:
                                 s[i][j] += 0.8
@@ -622,7 +626,7 @@ class Model(object):
             route = [(-1, 0, c[i][j][0], c[i][j][1])]
             self.vehs[vid].build_route(osrm, route)
             for i_, j_ in itertools.product(range(Nlat), range(Nlng)):
-                if self.vehs[vid].lat >= Olat - (i_+1)*Elat:
+                if self.vehs[vid].lat >= Dlat - (i_+1)*Elat:
                     if self.vehs[vid].lng <= Olng + (j_+1)*Elng:
                         v[i_][j_] -= 1
                         break
