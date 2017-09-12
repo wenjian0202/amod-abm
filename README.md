@@ -86,17 +86,17 @@ Create the Hierarchy:
 ```
 > The Open Source Routing Machine is a C++ implementation of a high-performance routing engine for shortest paths in OpenStreetMap road networks. It uses an implementation of Contraction Hierarchies and is able to compute and output a shortest path between any origin and destination within a few milliseconds.
 
-We're about to launch our own routing server! Run the OSRM engine and establish an HTTP server:
+We're about to launch our own routing engine! Run the OSRM engine and establish an HTTP server:
 ```
 ./build/osrm-routed greater-london-latest.osrm
 ```
-Here we are! Let's try sending an HTTP request to get response. For example, we'll find a route from King's Cross to Big Ben:
+Here we are! Let's try sending an HTTP request to get response. Open your web browser, paste the following request and hit enter. We'll find a route from King's Cross to Big Ben:
 ```
-curl "http://0.0.0.0:5000/route/v1/driving/-0.124402,51.531658;-0.124589,51.500730?alternatives=false&steps=true"
+http://0.0.0.0:5000/route/v1/driving/-0.124402,51.531658;-0.124589,51.500730?alternatives=false&steps=true
 ```
-[General Options](https://github.com/Project-OSRM/osrm-backend/blob/master/docs/http.md) provides syntax for all possible services.
+[General Options](https://github.com/Project-OSRM/osrm-backend/blob/master/docs/http.md) gives syntax for all possible services that OSRM is providing. 
 
-Use `Control + C` to terminate to engine.
+Go back to the terminal. Use `Control + C` to terminate to engine. Get a coffee. And, this was easy right?
 
-
+The class `OSRMEngine` has even made your life easier. It provides a series of function for starting, calling and shutting down your engine. Git the code, run `main.py` and see what's happening. 
 
