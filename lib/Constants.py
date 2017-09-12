@@ -5,7 +5,7 @@ constants are found here
 from lib.Demand import *
 
 # fleet size and vehicle capacity
-FLEET_SIZE = 4
+FLEET_SIZE = 10
 VEH_CAPACITY = 4
 
 # demand matrix, demand volume and its nickname
@@ -14,9 +14,9 @@ DMD_VOL = D_AVPT550 / 10
 DMD_STR = "AVPT550"
 
 # warm-up time, study time and cool-down time of the simulation (in seconds)
-T_WARM_UP = 60*0
-T_STUDY = 60*30
-T_COOL_DOWN = 60*0
+T_WARM_UP = 60*30
+T_STUDY = 60*60
+T_COOL_DOWN = 60*30
 T_TOTAL = (T_WARM_UP + T_STUDY + T_COOL_DOWN)
 # time before which system gets notified of the in-advance requests
 T_ADV_REQ = 60*30

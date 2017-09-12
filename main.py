@@ -21,6 +21,8 @@ if __name__ == "__main__":
 		osrm.start_server()
 		osrm = OsrmEngine(exe_loc, map_loc)
 		osrm.start_server()
+		osrm = OsrmEngine(exe_loc, map_loc)
+		osrm.start_server()
 	else:
 		osrm = None
 
@@ -52,7 +54,7 @@ if __name__ == "__main__":
 			# frames record the states of the AMoD model for animation purpose
 			frames = []
 			# initialize the AMoD model
-			model = Model(DMD_MAT, DMD_VOL, dqn=dqn, V=FLEET_SIZE, K=VEH_CAPACITY, rebl=MET_REBL, reopt=MET_REOPT)
+			model = Model(DMD_MAT, DMD_VOL, dqn=dqn, V=FLEET_SIZE, K=VEH_CAPACITY, assign=MET_ASSIGN, reopt=MET_REOPT, rebl=MET_REBL)
 			# start time
 			stime = time.time()
 			# dispatch the system for T_TOTAL seconds, at the interval of INT_ASSIGN
