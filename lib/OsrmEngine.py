@@ -1,5 +1,5 @@
 """
-Open Street Routing Machine (OSRM)
+Open Source Routing Machine (OSRM)
 """
 
 import os
