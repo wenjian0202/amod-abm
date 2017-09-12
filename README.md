@@ -39,3 +39,64 @@ The following features are expected to be available by the end of this year (201
 
 ## how do I get started?
 
+Python is an interpreted language and the core code could be executed without previously compiling into machine languages. However, OSRM, written in C++14, should be built from source.
+
+The following installation guideline targets MacOS. For more information please go to OSRM [Wiki](https://github.com/Project-OSRM/osrm-backend#open-source-routing-machine). 
+
+Install HomeBrew if not available:
+```
+/usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+```
+Install wget if not available:
+```
+brew install wget
+```
+Navigate into your project folder, and get OSRM source files and extract:
+```
+wget https://github.com/Project-OSRM/osrm-backend/archive/v5.11.0.tar.gz
+tar -xzf v5.11.0.tar.gz
+```
+v5.11.0 is the [latest release](https://github.com/Project-OSRM/osrm-backend/releases) for the time being. To download from Git, you can also do `git clone https://github.com/Project-OSRM/osrm-backend.git`.
+
+Get into the folder:
+```
+cd osrm-backend-5.11.0
+```
+Install `cmake` and make files :
+```
+./third_party/mason/mason install cmake 3.6.2
+export PATH=$(./third_party/mason/mason prefix cmake 3.6.2)/bin:$PATH
+mkdir build
+cd build
+cmake ../ -DENABLE_MASON=1
+make
+cd ..
+```
+The `osrm-routed` executable should be working now. Then you need to grab a `.osm.pbf` OpenStreetMap extract from [Geofabrik](http://download.geofabrik.de/index.html). Pick up a place you like. For this demo, we use London:
+```
+wget http://download.geofabrik.de/europe/great-britain/england/greater-london-latest.osm.pbf
+```
+Extract the road network:
+```
+./build/osrm-extract greater-london-latest.osm.pbf -p profiles/car.lua
+```
+Create the Hierarchy:
+```
+./build/osrm-contract greater-london-latest.osrm
+```
+> The Open Source Routing Machine is a C++ implementation of a high-performance routing engine for shortest paths in OpenStreetMap road networks. It uses an implementation of Contraction Hierarchies and is able to compute and output a shortest path between any origin and destination within a few milliseconds.
+
+We're about to launch our own routing server! Run the OSRM engine and establish an HTTP server:
+```
+./build/osrm-routed greater-london-latest.osrm
+```
+Here we are! Let's try sending an HTTP request to get response. For example, we'll find a route from King's Cross to Big Ben:
+```
+curl "http://0.0.0.0:5000/route/v1/driving/-0.124402,51.531658;-0.124589,51.500730?alternatives=false&steps=true"
+```
+[General Options](https://github.com/Project-OSRM/osrm-backend/blob/master/docs/http.md) provides syntax for all possible services.
+
+Use `Control + C` to terminate to engine.
+
+
+
