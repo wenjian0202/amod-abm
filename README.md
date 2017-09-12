@@ -98,5 +98,5 @@ http://0.0.0.0:5000/route/v1/driving/-0.124402,51.531658;-0.124589,51.500730?alt
 
 Go back to the terminal. Use `Control + C` to terminate to engine. Get a coffee. And, this was easy right?
 
-The class `OSRMEngine` has even made your life easier. It provides a series of function for starting, calling and shutting down your engine. Git the code, run `main.py` and see what's happening. 
+The class `OSRMEngine` has even made your life easier. It provides a series of function for starting, calling and shutting down your engine. Run `main.py` and see what's happening. 
 
