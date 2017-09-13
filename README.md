@@ -37,6 +37,12 @@ The following features are expected to be available by the end of this year (201
 - automated interaction with the demand prediction models (so as to link with pricing)
 - statistics regarding operational cost and revenue
 
+## ongoing parts
+
+The following parts of the code are still experimental. They might be not BUG-FREE:
+- `simulated_annealing()` in class `Model`: slow and not very effective
+- `dqn.py` for training DQN: slow by nature; current version overacts; multiagent model in construction 
+
 ## how do I get started?
 
 Python is an interpreted language and the core code could be executed without previously compiling into machine languages. However, OSRM, written in C++14, should be built from source.
