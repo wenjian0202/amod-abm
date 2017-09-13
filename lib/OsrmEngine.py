@@ -63,7 +63,7 @@ class OsrmEngine(object):
             output = p.communicate()[0].decode("utf-8")
         except FileNotFoundError:
             output = ""
-        if "v5.5.0" not in str(output):
+        if "v5.11.0" not in str(output):
             raise Exception("osrm does not have the right version")
         # check no running server
         if self.check_server():
