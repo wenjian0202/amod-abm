@@ -1,12 +1,12 @@
 # amod-abm
 
-![Alt Text](https://github.com/wenjian0202/amod-abm/blob/master/media/demo.gif)
+![demo](https://github.com/wenjian0202/amod-abm/blob/master/media/demo.gif)
 
 ## what's amod-abm?
 
-Basically, `amod-abm` is an **a**gent-**b**ased **m**odeling platform for simulating **a**utonomous **m**obility-**o**n-**d**emand systems. It is written in Python 3 and has an [Open Source Routing Machine](https://github.com/Project-OSRM/osrm-backend#open-source-routing-machine) working backend. The simulation platform dipicts *agents* (travelers, vehicles etc.) at the individual level while tackling the traffic in a macroscopic manner (which means, no interaction with other vehicles and no congestion concerns). The current demo is based on a London case study, for which it provides tools to support AMoD system design (fleet sizing, sharing policies, hailing rules, pricing etc.) and experiment with dispatching algorithms including trip-vehicle assignment and real-time rebalancing. 
+Basically, `amod-abm` is an **A**gent-**B**ased **M**odeling platform for simulating **A**utonomous **M**obility-**o**n-**D**emand systems. It is written in Python 3 and has an [Open Source Routing Machine](https://github.com/Project-OSRM/osrm-backend#open-source-routing-machine) working backend. The simulation platform dipicts *agents* (travelers, vehicles etc.) at the individual level while tackling the traffic in a macroscopic manner (which means, no interaction with other vehicles and no congestion concerns). The current demo is based on a London case study, for which it provides tools to support AMoD system design (fleet sizing, sharing policies, hailing rules, pricing etc.) and experiment with dispatching algorithms including trip-vehicle assignment and real-time rebalancing. 
 
-Almost effortlessly, this toolbox could be used to simulate AMoD systems in any urban setting other than London (as long as we understand the demand there). You're also welcome to extend `amod-abm` according to your own needs. 
+Almost effortlessly, this application could be transferred from London to simulate AMoD systems in any urban setting (as long as you understand the demand there). You're also welcome to extend `amod-abm` according to your own needs. 
 
 Thanks for contributing! 
 
@@ -51,28 +51,40 @@ Install wget if not available:
 ```
 brew install wget
 ```
-Navigate into your project folder, and get OSRM source files and extract:
+Similarly, install all other necessary dependencies:
+```
+brew install boost git cmake libzip libstxxl libxml2 lua tbb ccache
+brew install GDAL
+```
+Navigate to a good directory, and clone the project from GitHub using git:
+```
+git clone https://github.com/wenjian0202/amod-abm.git
+```
+Get into your project folder, and remove the compiled OSRM files:
+```
+cd amod-abm
+rm -R osrm-backend-5.11.0
+```
+Get new OSRM source files and extract:
 ```
 wget https://github.com/Project-OSRM/osrm-backend/archive/v5.11.0.tar.gz
 tar -xzf v5.11.0.tar.gz
 ```
-v5.11.0 is the [latest release](https://github.com/Project-OSRM/osrm-backend/releases) for the time being. To download from Git, you can also do `git clone https://github.com/Project-OSRM/osrm-backend.git`.
+v5.11.0 is the [latest release](https://github.com/Project-OSRM/osrm-backend/releases) for the time being. To download the current version from Git, you can also do `git clone https://github.com/Project-OSRM/osrm-backend.git`.
 
 Get into the folder:
 ```
 cd osrm-backend-5.11.0
 ```
-Install `cmake` and make files :
+Make files:
 ```
-./third_party/mason/mason install cmake 3.6.2
-export PATH=$(./third_party/mason/mason prefix cmake 3.6.2)/bin:$PATH
 mkdir build
 cd build
-cmake ../ -DENABLE_MASON=1
+cmake ../
 make
 cd ..
 ```
-The `osrm-routed` executable should be working now. Then you need to grab a `.osm.pbf` OpenStreetMap extract from [Geofabrik](http://download.geofabrik.de/index.html). Pick up a place you like. For this demo, we use London:
+The `osrm-routed` executable should be working now. The next step is to grab a `.osm.pbf` OpenStreetMap extract from [Geofabrik](http://download.geofabrik.de/index.html). Pick up a place you like. For this demo, we use London:
 ```
 wget http://download.geofabrik.de/europe/great-britain/england/greater-london-latest.osm.pbf
 ```
@@ -80,7 +92,7 @@ Extract the road network:
 ```
 ./build/osrm-extract greater-london-latest.osm.pbf -p profiles/car.lua
 ```
-Create the Hierarchy:
+Create the hierarchy:
 ```
 ./build/osrm-contract greater-london-latest.osrm
 ```
@@ -90,13 +102,38 @@ We're about to launch our own routing engine! Run the OSRM engine and establish 
 ```
 ./build/osrm-routed greater-london-latest.osrm
 ```
-Here we are! Let's try sending an HTTP request to get response. Open your web browser, paste the following request and hit enter. We'll find a route from King's Cross to Big Ben:
+Here we are! Let's try sending an HTTP request to get response. Open your web browser, paste the following request and hit *Enter*. We'll find a route from King's Cross to Big Ben, in JSON format:
 ```
 http://0.0.0.0:5000/route/v1/driving/-0.124402,51.531658;-0.124589,51.500730?alternatives=false&steps=true
 ```
 [General Options](https://github.com/Project-OSRM/osrm-backend/blob/master/docs/http.md) gives syntax for all possible services that OSRM is providing. 
 
-Go back to the terminal. Use `Control + C` to terminate to engine. Get a coffee. And, this was easy right?
+Go back to your terminal. Use `Control + C` to terminate to engine. Get a coffee. And, this was easy right?
 
-The class `OSRMEngine` has even made your life easier. It provides a series of function for starting, calling and shutting down your engine. Run `main.py` and see what's happening. 
+The class `OSRMEngine` has even made your life easier. It provides a series of functions for starting, calling and shutting down your engine. A demo of the simulation platform has been prepared. Run `python main.py` and see what's happening. 
+
+## Requirements
+
+- OS X >= 10.10
+- XCode
+- Python >= 3.6
+
+## Support
+
+You can post bug reports and feature requests in [Issues](https://github.com/wenjian0202/amod-abm/issues).
+
+## Citing
+
+If you use `amod-abm` in your research, you can cite it as follows:
+
+```
+@misc{wen2017amod-abm,
+    author = {Wen, Jian},
+    title = {amod-abm},
+    year = {2017},
+    publisher = {GitHub},
+    journal = {GitHub repository},
+    howpublished = {\url{https://github.com/wenjian0202/amod-abm}},
+}
+```
 
