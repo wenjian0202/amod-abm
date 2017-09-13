@@ -27,7 +27,7 @@ T_ADV_REQ = 60*30
 # sar = simple anticipatory rebalancing, orp = optimal rebalancing problem, dqn = deep Q network
 MET_ASSIGN = "ins"
 MET_REOPT = "no"
-MET_REBL = "sar"
+MET_REBL = "orp"
 
 # intervals for vehicle-request assignment, reoptimization and rebalancing
 INT_ASSIGN = 30
