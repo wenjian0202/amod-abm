@@ -60,6 +60,8 @@ Navigate to a good directory, and clone the project from GitHub using git:
 ```
 git clone https://github.com/wenjian0202/amod-abm.git
 ```
+If you want to contribute back to `amod-abm` or keep fetching new features from `amod-abm` in the future, instead of cloning, fork the repo into your GitHub account before your clone: `git clone https://github.com/your_username/amod-abm.git`. 
+
 Get into your project folder, and remove the compiled OSRM files:
 ```
 cd amod-abm
