@@ -25,22 +25,22 @@ if __name__ == "__main__":
 	# define the environment for the Deep Q Network
 	env = RebalancingEnv( Model(DMD_MAT, DMD_VOL, V=FLEET_SIZE, K=VEH_CAPACITY), penalty=-0 )
 
-	# define the DQN model
+	# define the DQN sequential structure
 	nb_actions = env.action_space.n
 	input_shape = (1,) + env.state.shape
 	input_dim = env.input_dim
 
-	model = Sequential()
-	model.add(Flatten(input_shape=input_shape))
-	model.add(Dense(256, activation='relu'))
-	model.add(Dense(nb_actions, activation='linear'))
+	seq = Sequential()
+	seq.add(Flatten(input_shape=input_shape))
+	seq.add(Dense(256, activation='relu'))
+	seq.add(Dense(nb_actions, activation='linear'))
 
 	# instantiate a DQN and load weights from file
 	# dqn is used only when the rebalancing method (MET_REBL) is "dqn"
 	memory = SequentialMemory(limit=2000, window_length=1)
 	policy = EpsGreedyQPolicy()
 
-	dqn = DQNAgent(model=model, nb_actions=nb_actions, memory=memory, nb_steps_warmup=100,
+	dqn = DQNAgent(model=seq, nb_actions=nb_actions, memory=memory, nb_steps_warmup=100,
 				   target_model_update=1e-2, policy=policy, gamma=.80)
 	dqn.compile(Adam(lr=0.001, epsilon=0.05, decay=0.0), metrics=['mae'])
 	dqn.load_weights('weights/dqn_weights_BAL5_150.h5f')
