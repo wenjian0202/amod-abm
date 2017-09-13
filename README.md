@@ -6,7 +6,7 @@
 
 Basically, `amod-abm` is an **a**gent-**b**ased **m**odeling platform for simulating **a**utonomous **m**obility-**o**n-**d**emand systems. It is written in Python 3 and has an [Open Source Routing Machine](https://github.com/Project-OSRM/osrm-backend#open-source-routing-machine) working backend. The simulation platform dipicts *agents* (travelers, vehicles etc.) at the individual level while tackling the traffic in a macroscopic manner (which means, no interaction with other vehicles and no congestion concerns). The current demo is based on a London case study, for which it provides tools to support AMoD system design (fleet sizing, sharing policies, hailing rules, pricing etc.) and experiment with dispatching algorithms including trip-vehicle assignment and real-time rebalancing. 
 
-Almost effortlessly, this toolbox could be used to simulate AMoD systems in any urban setting other than London (as long as we understand the demand there). You're also welcome to extend `amod-abm` according to your own needs. 
+Almost effortlessly, this application could be transferred from London to simulate AMoD systems in any urban setting (as long as you understand the demand there). You're also welcome to extend `amod-abm` according to your own needs. 
 
 Thanks for contributing! 
 
@@ -51,24 +51,36 @@ Install wget if not available:
 ```
 brew install wget
 ```
-Navigate into your project folder, and get OSRM source files and extract:
+Similarly, install all other necessary dependencies for the installation:
+```
+brew install boost git cmake libzip libstxxl libxml2 lua tbb ccache
+brew install GDAL
+```
+Find a good directory, and clone the project from GitHub using git:
+```
+git clone https://github.com/wenjian0202/amod-abm.git
+```
+Get into your project folder, and remove the compiled OSRM files:
+```
+cd amod-abm
+rm -R osrm-backend-5.11.0
+```
+Get new OSRM source files and extract:
 ```
 wget https://github.com/Project-OSRM/osrm-backend/archive/v5.11.0.tar.gz
 tar -xzf v5.11.0.tar.gz
 ```
-v5.11.0 is the [latest release](https://github.com/Project-OSRM/osrm-backend/releases) for the time being. To download from Git, you can also do `git clone https://github.com/Project-OSRM/osrm-backend.git`.
+v5.11.0 is the [latest release](https://github.com/Project-OSRM/osrm-backend/releases) for the time being. To download the current version from Git, you can also do `git clone https://github.com/Project-OSRM/osrm-backend.git`.
 
 Get into the folder:
 ```
 cd osrm-backend-5.11.0
 ```
-Install `cmake` and make files :
+Make files :
 ```
-./third_party/mason/mason install cmake 3.6.2
-export PATH=$(./third_party/mason/mason prefix cmake 3.6.2)/bin:$PATH
 mkdir build
 cd build
-cmake ../ -DENABLE_MASON=1
+cmake ../
 make
 cd ..
 ```
