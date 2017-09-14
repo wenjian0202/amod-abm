@@ -39,7 +39,7 @@ The following features are expected to be available by the end of this year (201
 
 ## ongoing parts
 
-The following parts of the code are still experimental. They might be not BUG-FREE:
+The following parts of the code are still experimental. They might be NOT BUG-FREE:
 - `simulated_annealing()` in class `Model`: slow and not very effective
 - `dqn.py` for training DQN: slow by nature; current version overacts; multiagent model in construction 
 
