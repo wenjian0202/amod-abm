@@ -37,7 +37,7 @@ INT_REBL = 150
 # if road network is enabled, use the routing server; otherwise use Euclidean distance
 IS_ROAD_ENABLED = True
 # if true, activate the animation
-IS_ANIMATION = True
+IS_ANIMATION = False
 
 # maximum detour factor and maximum wait time window
 MAX_DETOUR = 1.5

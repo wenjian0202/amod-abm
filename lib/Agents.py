@@ -81,15 +81,15 @@ class Veh(object):
         Lt: accumulated load, weighed by service time
         Ld: accumulated load, weighed by service distance
     """ 
-    def __init__(self, id, rs, K=4, S=6, lng=0.080444, lat=51.381263, T=0.0):
+    def __init__(self, id, rs, K=4, S=6, T=0.0):
         self.id = id
         self.idle = True
         self.rebl = False
         self.T = T
-        self.lng = lng + rs.uniform(-0.05, 0.05) 
-        self.lat = lat + rs.uniform(-0.03, 0.03)
-        self.tlng = lng
-        self.tlat = lat
+        self.lng = (Olng+Dlng)/2 + (Dlng-Olng)*rs.uniform(-0.35, 0.35) 
+        self.lat = (Olat+Dlat)/2 + (Dlat-Olat)*rs.uniform(-0.35, 0.35)
+        self.tlng = self.lng
+        self.tlat = self.lat
         self.K = K
         self.S = S
         self.n = 0
