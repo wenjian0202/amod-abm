@@ -6,6 +6,7 @@ import os
 import requests
 import json
 import time
+import math
 import numpy as np
 from subprocess import Popen, PIPE
 
@@ -129,7 +130,7 @@ class OsrmEngine(object):
             else:
                 return None
         else:
-            return np.sqrt( (69600 * (olng-dlng))**2 + (111317 * (olat-dlat))**2 )
+            return (6371000*2*math.pi/360 * np.sqrt( (math.cos((olat+dlat)*math.pi/360)*(olng-dlng))**2 + (olat-dlat)**2))
     
     # get the duration of the best route from origin to destination
     # if road network is not enabled, return the duration based on Euclidean distance and constant speed   
