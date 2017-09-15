@@ -5,7 +5,7 @@ constants are found here
 from lib.Demand import *
 
 # fleet size and vehicle capacity
-FLEET_SIZE = 10
+FLEET_SIZE = 6
 VEH_CAPACITY = 4
 
 # demand matrix, demand volume and its nickname
@@ -35,9 +35,9 @@ INT_REOPT = 30
 INT_REBL = 150
 
 # if road network is enabled, use the routing server; otherwise use Euclidean distance
-IS_ROAD_ENABLED = True
+IS_ROAD_ENABLED = False
 # if true, activate the animation
-IS_ANIMATION = False
+IS_ANIMATION = True
 
 # maximum detour factor and maximum wait time window
 MAX_DETOUR = 1.5
@@ -51,16 +51,16 @@ COEF_WAIT = 1.5
 COEF_INVEH = 1.0
 
 # map width and height
-MAP_WIDTH = 5.52
-MAP_HEIGHT = 6.63
+MAP_WIDTH = 4.65
+MAP_HEIGHT = 4.23
 
 # coordinates
 # (Olng, Olat) lower left corner
-Olng = -0.02
-Olat = 51.29
+Olng = -71.13
+Olat = 42.345
 # (Dlng, Dlat) upper right corner
-Dlng = 0.18
-Dlat = 51.44
+Dlng = -71.07
+Dlat = 42.385
 # number of cells in the gridded map
 Nlng = 10
 Nlat = 10
@@ -68,5 +68,5 @@ Nlat = 10
 Mlng = 5
 Mlat = 5
 # length of edges of a cell
-Elng = 0.02
-Elat = 0.015
+Elng = 0.006
+Elat = 0.004
