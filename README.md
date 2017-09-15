@@ -1,14 +1,15 @@
 # amod-abm
 
-![demo](https://github.com/wenjian0202/amod-abm/blob/master/media/demo.gif)
+<img src="https://github.com/wenjian0202/amod-abm/blob/master/media/demo.gif" width="400">
 
 ## what's amod-abm?
 
-Basically, `amod-abm` is an **A**gent-**B**ased **M**odeling platform for simulating **A**utonomous **M**obility-**o**n-**D**emand systems. It is written in Python 3 and has an [Open Source Routing Machine](https://github.com/Project-OSRM/osrm-backend#open-source-routing-machine) working backend. The simulation platform dipicts *agents* (travelers, vehicles etc.) at the individual level while tackling the traffic in a macroscopic manner (which means, no interaction with other vehicles and no congestion concerns). The current demo is based on a London case study, for which it provides tools to support AMoD system design (fleet sizing, sharing policies, hailing rules, pricing etc.) and experiment with dispatching algorithms including trip-vehicle assignment and real-time rebalancing. 
+Basically, `amod-abm` is an **A**gent-**B**ased **M**odeling platform for simulating **A**utonomous **M**obility-**o**n-**D**emand systems. It is written in Python 3 and has an [Open Source Routing Machine](https://github.com/Project-OSRM/osrm-backend#open-source-routing-machine) working backend. The simulation platform dipicts *agents* (travelers, vehicles etc.) at the individual level and has been used in many large-scale applications, for which it provides tools to:
+- support AMoD system design (fleet sizing, sharing policies, hailing rules, pricing etc.);
+- test different vehicle operations and traveler behavior models;
+- experiment with new dispatching algorithms for trip-vehicle assignment and real-time rebalancing. 
 
-Almost effortlessly, this application could be transferred from London to simulate AMoD systems in any urban setting (as long as you understand the demand there). You're also welcome to extend `amod-abm` according to your own needs. 
-
-Thanks for contributing! 
+Almost effortlessly, this application could be applied to any urban setting to simulate AMoD systems (as long as you understand the demand there). The open-source nature also lends itself to customized extensions according to developers' own needs. You're all welcome to contribute to `amod-abm`! 
 
 ## what is and what will be included?
 
@@ -92,27 +93,27 @@ cmake ../
 make
 cd ..
 ```
-The `osrm-routed` executable should be working now. The next step is to grab a `.osm.pbf` OpenStreetMap extract from [Geofabrik](http://download.geofabrik.de/index.html). Pick up a place you like. For this demo, we use London:
+The `osrm-routed` executable should be working now. The next step is to grab a `.osm.pbf` OpenStreetMap extract either [Mapzen](https://mapzen.com/data/metro-extracts/) or [Geofabrik](http://download.geofabrik.de/index.html). Pick up a place you like. For this demo, we use areas around MIT as a toy case:
 ```
-wget http://download.geofabrik.de/europe/great-britain/england/greater-london-latest.osm.pbf
+wget https://s3.amazonaws.com/metro-extracts.mapzen.com/boston_massachusetts.osm.pbf
 ```
 Extract the road network:
 ```
-./build/osrm-extract greater-london-latest.osm.pbf -p profiles/car.lua
+./build/osrm-extract boston_massachusetts.osm.pbf -p profiles/car.lua
 ```
 Create the hierarchy:
 ```
-./build/osrm-contract greater-london-latest.osrm
+./build/osrm-contract boston_massachusetts.osm.pbf
 ```
 > The Open Source Routing Machine is a C++ implementation of a high-performance routing engine for shortest paths in OpenStreetMap road networks. It uses an implementation of Contraction Hierarchies and is able to compute and output a shortest path between any origin and destination within a few milliseconds.
 
 We're about to launch our own routing engine! Run the OSRM engine and establish an HTTP server:
 ```
-./build/osrm-routed greater-london-latest.osrm
+./build/osrm-routed massachusetts-latest.osrm
 ```
-Here we are! Let's try sending an HTTP request to get response. Open your web browser, paste the following request and hit *Enter*. We'll find a route from King's Cross to Big Ben, in JSON format:
+Here we are! Let's try sending an HTTP request to get response. Open your web browser, paste the following request and hit *Enter*. We'll find a route from Stata Center to Santouka (my favorite ramen!), in [JSON](http://www.json.org/) format:
 ```
-http://0.0.0.0:5000/route/v1/driving/-0.124402,51.531658;-0.124589,51.500730?alternatives=false&steps=true
+http://0.0.0.0:5000/route/v1/driving/-71.0906,42.3616;-71.1159,42.3721?alternatives=false&steps=true
 ```
 [General Options](https://github.com/Project-OSRM/osrm-backend/blob/master/docs/http.md) gives syntax for all possible services that OSRM is providing. 
 
