@@ -183,7 +183,7 @@ class Veh(object):
                     leg.t += wait
             self.route.append(leg)
         else:
-            d_, t_ = get_distance_duration(self.tlng, self.tlat, tlng, tlat)
+            d_, t_ = osrm.get_distance_duration(self.tlng, self.tlat, tlng, tlat)
             leg = Leg(rid, pod, tlng, tlat, d_, t_, steps=[])
             leg.steps.append(Step(d_, t_, [[self.tlng, self.tlat],[tlng, tlat]]))
             self.route.append(leg)
