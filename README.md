@@ -1,6 +1,6 @@
 # amod-abm
 
-![demo](https://github.com/wenjian0202/amod-abm/blob/master/media/demo.gif)
+<img src="https://github.com/wenjian0202/amod-abm/blob/master/media/demo.gif" width="400">
 
 ## what's amod-abm?
 
