@@ -12,7 +12,7 @@ if __name__ == "__main__":
 	# path of the routing server
 	exe_loc = './osrm-backend-5.11.0/build/osrm-routed'
 	# path of the road network file that the routing server uses
-	map_loc = './osrm-backend-5.11.0/greater-london-latest.osrm'
+	map_loc = './osrm-backend-5.11.0/massachusetts-latest.osrm'
 
 	# if road network is enabled, initialize the routing server
 	# otherwise, use Euclidean distance
