@@ -526,7 +526,7 @@ class Model(object):
             if m[5] > rand:
                 OnD = True
                 if m[1] < 51.35:
-                    OnD = False if self.rs1.rand() < 0.5 else True
+                    OnD = False if self.rs1.rand() < PROB_ADV else True
                 req = Req(osrm, 
                           0 if self.N == 0 else self.reqs[-1].id+1,
                           dt if self.N == 0 else self.reqs[-1].Tr+dt,
