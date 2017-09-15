@@ -35,7 +35,7 @@ INT_REOPT = 30
 INT_REBL = 150
 
 # if road network is enabled, use the routing server; otherwise use Euclidean distance
-IS_ROAD_ENABLED = True
+IS_ROAD_ENABLED = False
 # if true, activate the animation
 IS_ANIMATION = False
 

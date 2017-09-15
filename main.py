@@ -16,11 +16,8 @@ if __name__ == "__main__":
 
 	# if road network is enabled, initialize the routing server
 	# otherwise, use Euclidean distance
-	if IS_ROAD_ENABLED:
-		osrm = OsrmEngine(exe_loc, map_loc)
-		osrm.start_server()
-	else:
-		osrm = None
+	osrm = OsrmEngine(exe_loc, map_loc)
+	osrm.start_server()
 
 	# define the environment for the Deep Q Network
 	env = RebalancingEnv( Model(DMD_MAT, DMD_VOL, V=FLEET_SIZE, K=VEH_CAPACITY), penalty=-0 )
