@@ -5,21 +5,19 @@ constants are found here
 from lib.Demand import *
 
 # fleet size and vehicle capacity
-FLEET_SIZE = 6
+FLEET_SIZE = 10
 VEH_CAPACITY = 4
 
 # demand matrix, demand volume and its nickname
-DMD_MAT = M_AVPT550
-DMD_VOL = D_AVPT550 / 10
-DMD_STR = "AVPT550"
+DMD_MAT = M_MIT
+DMD_VOL = D_MIT
+DMD_STR = "MIT"
 
 # warm-up time, study time and cool-down time of the simulation (in seconds)
 T_WARM_UP = 60*30
 T_STUDY = 60*60
 T_COOL_DOWN = 60*30
 T_TOTAL = (T_WARM_UP + T_STUDY + T_COOL_DOWN)
-# time before which system gets notified of the in-advance requests
-T_ADV_REQ = 60*30
 
 # methods for vehicle-request assignment, reoptimization and rebalancing
 # ins = insertion heuristics
@@ -35,7 +33,7 @@ INT_REOPT = 30
 INT_REBL = 150
 
 # if road network is enabled, use the routing server; otherwise use Euclidean distance
-IS_ROAD_ENABLED = False
+IS_ROAD_ENABLED = True
 # if true, activate the animation
 IS_ANIMATION = True
 
@@ -45,6 +43,11 @@ MAX_WAIT = 60*10
 
 # constant vehicle speed when road network is disabled (in meters/second)
 CST_SPEED = 6
+
+# probability that a request is sent in advance (otherwise, on demand)
+PROB_ADV = 0.0
+# time before which system gets notified of the in-advance requests
+T_ADV_REQ = 60*30
 
 # coefficients for wait time and in-vehicle travel time in the utility function
 COEF_WAIT = 1.5
