@@ -93,17 +93,17 @@ cmake ../
 make
 cd ..
 ```
-The `osrm-routed` executable should be working now. The next step is to grab a `.osm.pbf` OpenStreetMap extract from [Geofabrik](http://download.geofabrik.de/index.html). Pick up a place you like. For this demo, we use areas around MIT as a toy case:
+The `osrm-routed` executable should be working now. The next step is to grab a `.osm.pbf` OpenStreetMap extract either [Mapzen](https://mapzen.com/data/metro-extracts/) or [Geofabrik](http://download.geofabrik.de/index.html). Pick up a place you like. For this demo, we use areas around MIT as a toy case:
 ```
-wget http://download.geofabrik.de/north-america/us/massachusetts-latest.osm.pbf
+wget https://s3.amazonaws.com/metro-extracts.mapzen.com/boston_massachusetts.osm.pbf
 ```
 Extract the road network:
 ```
-./build/osrm-extract massachusetts-latest.osm.pbf -p profiles/car.lua
+./build/osrm-extract boston_massachusetts.osm.pbf -p profiles/car.lua
 ```
 Create the hierarchy:
 ```
-./build/osrm-contract massachusetts-latest.osm.pbf
+./build/osrm-contract boston_massachusetts.osm.pbf
 ```
 > The Open Source Routing Machine is a C++ implementation of a high-performance routing engine for shortest paths in OpenStreetMap road networks. It uses an implementation of Contraction Hierarchies and is able to compute and output a shortest path between any origin and destination within a few milliseconds.
 
