@@ -8,15 +8,20 @@ from lib.Demand import *
 FLEET_SIZE = 10
 VEH_CAPACITY = 4
 
-# demand matrix, demand volume from Demand.py
 # ASC and the nickname of the run
-ASC = -5.50
-DMD_STR = "AVPT" + str(ASC)
+ASC_AVPT = -5.50
+ASC_NAME = "AVPT" + str(ASC_AVPT)
+
+# initial demand matrix from Demand.py
+
+# initial wait time and detour factor when starting the interaction
+INI_WAIT = 300
+INI_DETOUR = 1.00
 
 # warm-up time, study time and cool-down time of the simulation (in seconds)
-T_WARM_UP = 60*2
-T_STUDY = 60*2
-T_COOL_DOWN = 60*2
+T_WARM_UP = 60*30
+T_STUDY = 60*60
+T_COOL_DOWN = 60*30
 T_TOTAL = (T_WARM_UP + T_STUDY + T_COOL_DOWN)
 # time before which system gets notified of the in-advance requests
 T_ADV_REQ = 60*30
@@ -37,7 +42,7 @@ INT_REBL = 150
 # if road network is enabled, use the routing server; otherwise use Euclidean distance
 IS_ROAD_ENABLED = True
 # if true, activate the animation
-IS_ANIMATION = True
+IS_ANIMATION = False
 
 # maximum detour factor and maximum wait time window
 MAX_DETOUR = 1.5
