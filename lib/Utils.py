@@ -125,15 +125,15 @@ def print_results(model, runtime):
 	f.close()
 
 	# write and save data of all requests
-	f = open('output/requests.csv', 'w')
-	writer = csv.writer(f)
-	writer.writerow(["id", "olng", "olat", "dlng", "dlat", "Ts", "OnD", "Tr", "Cep", "Tp", "Td", "WT", "VT", "D"])
-	for req in model.reqs:
-		if req.Cep >= T_WARM_UP and req.Cep <= T_WARM_UP+T_STUDY:
-			row = [req.id, req.olng, req.olat, req.dlng, req.dlat, req.Ts, req.OnD, req.Tr, req.Cep, req.Tp, req.Td,
-			 req.Tp-req.Cep if req.Tp >= 0 else -1, req.Td-req.Tp if req.Td >= 0 else -1, req.D]
-			writer.writerow(row)
-	f.close()
+	# f = open('output/requests.csv', 'w')
+	# writer = csv.writer(f)
+	# writer.writerow(["id", "olng", "olat", "dlng", "dlat", "Ts", "OnD", "Tr", "Cep", "Tp", "Td", "WT", "VT", "D"])
+	# for req in model.reqs:
+	# 	if req.Cep >= T_WARM_UP and req.Cep <= T_WARM_UP+T_STUDY:
+	# 		row = [req.id, req.olng, req.olat, req.dlng, req.dlat, req.Ts, req.OnD, req.Tr, req.Cep, req.Tp, req.Td,
+	# 		 req.Tp-req.Cep if req.Tp >= 0 else -1, req.Td-req.Tp if req.Td >= 0 else -1, req.D]
+	# 		writer.writerow(row)
+	# f.close()
 
 # animation
 def anim(frames):

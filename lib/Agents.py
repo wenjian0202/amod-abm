@@ -523,14 +523,14 @@ class Model(object):
         dt = 3600.0/self.D * self.rs1.exponential()
         rand = self.rs1.rand()
         for m in self.M:
-            if m[5] > rand:
+            if m[6] > rand:
                 OnD = True
-                if m[1] < 51.35:
+                if m[2] < 51.35:
                     OnD = False if self.rs1.rand() < 0.5 else True
                 req = Req(osrm, 
                           0 if self.N == 0 else self.reqs[-1].id+1,
                           dt if self.N == 0 else self.reqs[-1].Tr+dt,
-                          m[0], m[1], m[2], m[3], OnD=OnD)
+                          m[1], m[2], m[3], m[4], OnD=OnD)
                 break
         return req
     
