@@ -8,10 +8,15 @@ from lib.Demand import *
 FLEET_SIZE = 10
 VEH_CAPACITY = 4
 
-# demand matrix, demand volume and its nickname
-DMD_MAT = M_MIT
-DMD_VOL = D_MIT
-DMD_STR = "MIT"
+# ASC and the nickname of the run
+ASC_AVPT = -5.50
+ASC_NAME = "AVPT" + str(ASC_AVPT)
+
+# initial demand matrix from Demand.py
+
+# initial wait time and detour factor when starting the interaction
+INI_WAIT = 300
+INI_DETOUR = 1.00
 
 # warm-up time, study time and cool-down time of the simulation (in seconds)
 T_WARM_UP = 60*30
