@@ -11,15 +11,13 @@ from lib.ModeChoice import *
 
 if __name__ == "__main__":
 	# path of the routing server
-	exe_loc = './osrm-backend-5.11.0/build/osrm-routed'
+	exe_loc = './osrm-backend-5.11.0/build/osrm-routed.exe'
 	# path of the road network file that the routing server uses
-	map_loc = './osrm-backend-5.11.0/boston_massachusetts.osm.pbf'
+	map_loc = './osrm-backend-5.11.0/build/boston_massachusetts.osm.pbf'
 
 	# if road network is enabled, initialize the routing server
 	# otherwise, use Euclidean distance
 	osrm = OsrmEngine(exe_loc, map_loc)
-	osrm.start_server()
-	osrm.kill_server()
 	osrm.start_server()
 
 	# define the environment for the Deep Q Network

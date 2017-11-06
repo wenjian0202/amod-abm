@@ -25,7 +25,7 @@ class OsrmEngine(object):
     def __init__(self,
                  exe_loc,
                  map_loc,
-                 ghost = '0.0.0.0',
+                 ghost = '127.0.0.1',
                  gport = 5000,
                  cst_speed = CST_SPEED):
         if not os.path.isfile(exe_loc):
@@ -45,7 +45,9 @@ class OsrmEngine(object):
 
     # kill any routing server currently running before starting something new
     def kill_server(self):
-        Popen(["killall", os.path.basename(self.exe_loc)], stdin=PIPE, stdout=PIPE, stderr=PIPE)
+        os.kill(self.pid, 1)
+        self.pid = None
+        # Popen(["killall", os.path.basename(self.exe_loc)], stdin=PIPE, stdout=PIPE, stderr=PIPE)
         time.sleep(2)
         print( "The routing server \"http://%s:%d\" is killed" % (self.ghost, self.gport) )
         
@@ -65,13 +67,14 @@ class OsrmEngine(object):
             output = p.communicate()[0].decode("utf-8")
         except FileNotFoundError:
             output = ""
-        if "v5.11.0" not in str(output):
+        if "v5.12.0" not in str(output):
             raise Exception("osrm does not have the right version")
         # check no running server
         if self.check_server():
             raise Exception("osrm-routed already running")
         # start server
         p = Popen([self.exe_loc, self.map_loc], stdin=PIPE, stdout=PIPE, stderr=PIPE)
+        self.pid = p.pid
         time.sleep(2)
         if requests.get("http://%s:%d" % (self.ghost, self.gport)).status_code == 400:
             print( "The routing server \"http://%s:%d\" starts running" % (self.ghost, self.gport) )
