@@ -207,7 +207,7 @@ def set_avpt_demand(step, demand_matrix, ASC_AVPT, WAIT_TIME, DETOUR_FACTOR):
 	df = df1.append(df2.append(df3, ignore_index=True), ignore_index=True)
 	total_volume = 0.00
 	for idx in range(len(df)):
-		demand_matrix[idx][4] = 1/(step+1) * df['AVPT_choice'][idx] + step/(step+1) * demand_matrix[idx][4]
+		demand_matrix[idx][4] = 1/(step+1) * df['AVPT_choice'][idx] / 3 + step/(step+1) * demand_matrix[idx][4]
 		total_volume += demand_matrix[idx][4]
 	accum_volume = 0.00
 	for idx in range(len(df)):

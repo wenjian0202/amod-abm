@@ -333,20 +333,24 @@ class Veh(object):
             for segb in step.geo[1:]:
                 dis += np.sqrt( (sega[0] - segb[0])**2 + (sega[1] - segb[1])**2)
                 sega = segb
-            dis_ = 0.0
-            _dis = 0.0
-            sega = step.geo[0]
-            for segb in step.geo[1:]:
-                _dis = np.sqrt( (sega[0] - segb[0])**2 + (sega[1] - segb[1])**2)
-                dis_ += _dis
-                if dis_ / dis > pct:
-                    break
-                sega = segb
-            while step.geo[0] != sega:
-                step.geo.pop(0)
-            _pct = (pct * dis - dis_ + _dis) / _dis       
-            step.geo[0][0] = sega[0] + _pct * (segb[0] - sega[0])
-            step.geo[0][1] = sega[1] + _pct * (segb[1] - sega[1])     
+            if dis != 0.0:
+                dis_ = 0.0
+                _dis = 0.0
+                sega = step.geo[0]
+                for segb in step.geo[1:]:
+                    _dis = np.sqrt( (sega[0] - segb[0])**2 + (sega[1] - segb[1])**2)
+                    dis_ += _dis
+                    if dis_ / dis > pct:
+                        break
+                    sega = segb
+                while step.geo[0] != sega:
+                    step.geo.pop(0)
+                if _dis != 0.0:
+                    _pct = (pct * dis - dis_ + _dis) / _dis
+                else:
+                    _pct = 1.0       
+                step.geo[0][0] = sega[0] + _pct * (segb[0] - sega[0])
+                step.geo[0][1] = sega[1] + _pct * (segb[1] - sega[1])     
         self.t -= step.t * pct
         self.d -= step.d * pct
         self.route[0].t -= step.t * pct

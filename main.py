@@ -50,17 +50,17 @@ if __name__ == "__main__":
 	writer.writerow([None])
 	row = ["ASC", "step", "ASSIGN", "REOPT", "REBL", "T_STUDY", "fleet", "capacity", "volume",
 	 "service_rate", "count_served", "count_reqs", "service_rate_ond", "count_served_ond", "count_reqs_ond", "service_rate_adv", "count_served_adv", "count_reqs_adv",
-	 "wait_time_ond", "wait_time_adv", "in_veh_time", "detour_factor", "veh_service_dist", "veh_service_time", "veh_service_time_percent", 
+	 "wait_time", "wait_time_adj", "wait_time_ond", "wait_time_adv", "in_veh_time", "detour_factor", "veh_service_dist", "veh_service_time", "veh_service_time_percent", 
 	 "veh_rebl_dist", "veh_rebl_time", "veh_rebl_time_percent", "veh_load_by_dist", "veh_load_by_time", None]
 	writer.writerow(row)
 	f.close()
 
-	for ii in range(10):
+	for FLEET_SIZE in [120,140,160,180,200]:
 		wait_time = INI_WAIT
 		detour_factor = INI_DETOUR
 		demand_matrix = INI_MAT
 		demand_volume = 0.00
-		for step in range(50):
+		for step in range(10):
 			demand_matrix, demand_volume = set_avpt_demand(step, demand_matrix, ASC_AVPT, wait_time, detour_factor)
 			# frames record the states of the AMoD model for animation purpose
 			frames = []

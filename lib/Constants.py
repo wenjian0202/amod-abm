@@ -5,11 +5,11 @@ constants are found here
 from lib.Demand import *
 
 # fleet size and vehicle capacity
-FLEET_SIZE = 10
+FLEET_SIZE = 300
 VEH_CAPACITY = 4
 
 # ASC and the nickname of the run
-ASC_AVPT = -5.50
+ASC_AVPT = -3.58
 ASC_NAME = "AVPT" + str(ASC_AVPT)
 
 # initial demand matrix from Demand.py
@@ -32,7 +32,7 @@ T_ADV_REQ = 60*30
 # sar = simple anticipatory rebalancing, orp = optimal rebalancing problem, dqn = deep Q network
 MET_ASSIGN = "ins"
 MET_REOPT = "no"
-MET_REBL = "orp"
+MET_REBL = "sar"
 
 # intervals for vehicle-request assignment, reoptimization and rebalancing
 INT_ASSIGN = 30

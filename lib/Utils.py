@@ -24,6 +24,8 @@ def print_results(model, step, runtime):
 	count_served = 0
 	count_served_ond = 0
 	count_served_adv = 0
+	wait_time = 0.0
+	wait_time_adj = 0.0
 	wait_time_ond = 0.0
 	wait_time_adv = 0.0
 	in_veh_time = 0.0
@@ -47,6 +49,7 @@ def print_results(model, step, runtime):
 	if not count_served == 0:
 		in_veh_time /= count_served
 		detour_factor /= count_served
+		wait_time = (wait_time_ond + wait_time_adv)/count_served
 	if not count_served_ond == 0:
 		wait_time_ond /= count_served_ond
 	if not count_served_adv == 0:	
@@ -58,6 +61,7 @@ def print_results(model, step, runtime):
 	service_rate_adv = 0.0
 	if not count_reqs == 0:
 		service_rate = 100.0 * count_served / count_reqs
+		wait_time_adj = (wait_time * service_rate + 2*MAX_WAIT * (100-service_rate))/100
 	if not count_reqs_ond == 0:
 		service_rate_ond = 100.0 * count_served_ond / count_reqs_ond
 	if not count_reqs_adv == 0:
@@ -119,12 +123,12 @@ def print_results(model, step, runtime):
 	writer = csv.writer(f)
 	row = [ASC_NAME, step, MET_ASSIGN, MET_REOPT, MET_REBL, T_STUDY, model.V, model.K, model.D,
 	 service_rate, count_served, count_reqs, service_rate_ond, count_served_ond, count_reqs_ond, service_rate_adv, count_served_adv, count_reqs_adv,
-	 wait_time_ond, wait_time_adv, in_veh_time, detour_factor, veh_service_dist, veh_service_time, veh_service_time_percent, 
+	 wait_time, wait_time_adj, wait_time_ond, wait_time_adv, in_veh_time, detour_factor, veh_service_dist, veh_service_time, veh_service_time_percent, 
 	 veh_rebl_dist, veh_rebl_time, veh_rebl_time_percent, veh_load_by_dist, veh_load_by_time, None]
 	writer.writerow(row)
 	f.close()
 
-	# write and save data of all requests
+	# # write and save data of all requests
 	# f = open('output/requests.csv', 'w')
 	# writer = csv.writer(f)
 	# writer.writerow(["id", "olng", "olat", "dlng", "dlat", "Ts", "OnD", "Tr", "Cep", "Tp", "Td", "WT", "VT", "D"])
@@ -135,7 +139,7 @@ def print_results(model, step, runtime):
 	# 		writer.writerow(row)
 	# f.close()
 
-	return wait_time_ond, detour_factor
+	return wait_time_adj, detour_factor
 
 # animation
 def anim(frames):
