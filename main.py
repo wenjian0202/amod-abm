@@ -55,36 +55,45 @@ if __name__ == "__main__":
 	writer.writerow(row)
 	f.close()
 
-	for FLEET_SIZE in [120,140,160,180,200]:
+	WT = [380.8684038]
+	DF = [1.153901899]
+
+	for FLEET_SIZE in [240]:
 		wait_time = INI_WAIT
 		detour_factor = INI_DETOUR
 		demand_matrix = INI_MAT
 		demand_volume = 0.00
-		for step in range(10):
+		for step in range(2):
 			demand_matrix, demand_volume = set_avpt_demand(step, demand_matrix, ASC_AVPT, wait_time, detour_factor)
-			# frames record the states of the AMoD model for animation purpose
-			frames = []
-			# initialize the AMoD model
-			model = Model(demand_matrix, demand_volume, dqn=dqn, V=FLEET_SIZE, K=VEH_CAPACITY, assign=MET_ASSIGN, reopt=MET_REOPT, rebl=MET_REBL)
-			# start time
-			stime = time.time()
-			# dispatch the system for T_TOTAL seconds, at the interval of INT_ASSIGN
-			for T in range(0, T_TOTAL, INT_ASSIGN):
-				model.dispatch_at_time(osrm, T)
+
+			if step < len(WT):
+				wait_time = WT[step]
+				detour_factor = DF[step]
+
+			else:
+				# frames record the states of the AMoD model for animation purpose
+				frames = []
+				# initialize the AMoD model
+				model = Model(demand_matrix, demand_volume, dqn=dqn, V=FLEET_SIZE, K=VEH_CAPACITY, assign=MET_ASSIGN, reopt=MET_REOPT, rebl=MET_REBL)
+				# start time
+				stime = time.time()
+				# dispatch the system for T_TOTAL seconds, at the interval of INT_ASSIGN
+				for T in range(0, T_TOTAL, INT_ASSIGN):
+					model.dispatch_at_time(osrm, T)
+					if IS_ANIMATION:
+						frames.append(copy.deepcopy(model.vehs))
+				# end time
+				etime = time.time()
+				# run time of this simulation
+				runtime = etime - stime
+
+				# generate, show and save the animation of this simulation
 				if IS_ANIMATION:
-					frames.append(copy.deepcopy(model.vehs))
-			# end time
-			etime = time.time()
-			# run time of this simulation
-			runtime = etime - stime
+					anime = anim(frames)
+					anime.save('output/anim.mp4', dpi=300, fps=None, extra_args=['-vcodec', 'libx264'])
+					plt.show()
 
-			# generate, show and save the animation of this simulation
-			if IS_ANIMATION:
-				anime = anim(frames)
-				anime.save('output/anim.mp4', dpi=300, fps=None, extra_args=['-vcodec', 'libx264'])
-				plt.show()
-
-			# output the simulation results and save data
-			wait_time, detour_factor = print_results(model, step, runtime)
+				# output the simulation results and save data
+				wait_time, detour_factor = print_results(model, step, runtime)
 
 			print("\nstep: %d\n  demand: %.2f; wait time: %.1f, detour %.2f\n" % (step, demand_volume, wait_time, detour_factor))

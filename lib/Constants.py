@@ -6,10 +6,10 @@ from lib.Demand import *
 
 # fleet size and vehicle capacity
 FLEET_SIZE = 300
-VEH_CAPACITY = 4
+VEH_CAPACITY = 3
 
 # ASC and the nickname of the run
-ASC_AVPT = -3.58
+ASC_AVPT = -3.00
 ASC_NAME = "AVPT" + str(ASC_AVPT)
 
 # initial demand matrix from Demand.py

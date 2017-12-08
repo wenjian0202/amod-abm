@@ -93,7 +93,7 @@ class OsrmEngine(object):
         count = 0
         # while count < 10:
         try:
-            response = requests.get(url, timeout=10)
+            response = requests.get(url, timeout=100)
             json_response = response.json()
             code = json_response['code']
             if code == 'Ok':
