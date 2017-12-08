@@ -14,7 +14,6 @@ from lib.OsrmEngine import *
 from lib.Agents import *
 from lib.Demand import *
 from lib.Constants import *
-from lib.Env import *
 
 # print and save results
 def print_results(model, step, runtime):

@@ -489,7 +489,6 @@ class Model(object):
         T: system time at current state
         M: demand matrix
         D: demand volume (trips/hour)
-        dqn: deep Q network for rebalancing
         V: number of vehicles
         K: capacity of vehicles
         vehs: the list of vehicles
@@ -501,14 +500,13 @@ class Model(object):
         reopt: reoptimization method
         rebl: rebalancing method
     """ 
-    def __init__(self, M, D, dqn=None, V=2, K=4, assign="ins", reopt="no", rebl="no"):
+    def __init__(self, M, D, V=2, K=4, assign="ins", reopt="no", rebl="no"):
         # two random generators, the seed of which could be modified for debug use
         self.rs1 = np.random.RandomState(np.random.randint(0,1000000))
         self.rs2 = np.random.RandomState(np.random.randint(0,1000000))
         self.T = 0.0
         self.M = M
         self.D = D
-        self.dqn = dqn
         self.V = V
         self.K = K
         self.vehs = []
@@ -574,10 +572,7 @@ class Model(object):
             if self.rebl == "sar":
                 self.rebalance_sar(osrm)
             elif self.rebl == "orp":
-                self.rebalance_orp(osrm, T)    
-            elif self.rebl == "dqn":
-                assert self.dqn != None
-                self.rebalance_dqn(osrm)    
+                self.rebalance_orp(osrm, T)       
         
     # insertion heuristics    
     def insertion_heuristics(self, osrm, T):
@@ -928,20 +923,6 @@ class Model(object):
             b[i][j] = 1 - p
         assert np.sum(v) == 0
         assert np.min(v) == 0
-
-    # rebalance using deep Q network
-    def rebalance_dqn(self, osrm):
-        Mlng = 5
-        Mlat = 5
-        Elng = 0.02
-        Elat = 0.015
-        for veh in self.vehs:
-            if veh.idle:
-                veh.clear_route()
-                veh.rebl = False
-                state, center = self.get_state(veh)
-                action = self.dqn.forward(state)
-                self.act(osrm, veh, action, center)
 
     # get the state of a vehicle
     # a state is defined as the predicted demand, the number of vehicles and their locations, occupancy etc around a vehicle
