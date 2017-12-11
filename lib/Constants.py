@@ -5,14 +5,21 @@ constants are found here
 from lib.Demand import *
 
 # fleet size and vehicle capacity
-FLEET_SIZE = 300
-VEH_CAPACITY = 3
+FLEET_SIZE = [50]
+VEH_CAPACITY = [4]
 
 # ASC and the nickname of the run
-ASC_AVPT = -3.00
+ASC_AVPT = -4.00
 ASC_NAME = "AVPT" + str(ASC_AVPT)
 
-# initial demand matrix from Demand.py
+# cost-benefit analysis
+COST_BASE = 0.0
+COST_MIN = 0.061
+COST_KM = 0.289
+PRICE_BASE = 0.831
+PRICE_MIN = 0.111
+PRICE_KM = 0.527
+PRICE_DISC = 0.75
 
 # initial wait time and detour factor when starting the interaction
 INI_WAIT = 300
@@ -26,17 +33,14 @@ T_TOTAL = (T_WARM_UP + T_STUDY + T_COOL_DOWN)
 # time before which system gets notified of the in-advance requests
 T_ADV_REQ = 60*30
 
-# methods for vehicle-request assignment, reoptimization and rebalancing
+# methods for vehicle-request assignment and rebalancing
 # ins = insertion heuristics
-# hsa = hybrid simulated annealing
 # sar = simple anticipatory rebalancing, orp = optimal rebalancing problem, dqn = deep Q network
 MET_ASSIGN = "ins"
-MET_REOPT = "no"
-MET_REBL = "sar"
+MET_REBL = "orp"
 
-# intervals for vehicle-request assignment, reoptimization and rebalancing
+# intervals for vehicle-request assignment and rebalancing
 INT_ASSIGN = 30
-INT_REOPT = 30
 INT_REBL = 150
 
 # if road network is enabled, use the routing server; otherwise use Euclidean distance
