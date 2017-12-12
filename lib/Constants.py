@@ -6,7 +6,7 @@ from lib.Demand import *
 
 # fleet size and vehicle capacity
 FLEET_SIZE = [50]
-VEH_CAPACITY = [4]
+VEH_CAPACITY = 4
 
 # ASC and the nickname of the run
 ASC_AVPT = -4.00
@@ -24,6 +24,9 @@ PRICE_DISC = 0.75
 # initial wait time and detour factor when starting the interaction
 INI_WAIT = 300
 INI_DETOUR = 1.00
+
+# number of iteration steps
+ITER_STEPS = 3
 
 # warm-up time, study time and cool-down time of the simulation (in seconds)
 T_WARM_UP = 60*30

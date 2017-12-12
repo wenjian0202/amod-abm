@@ -14,6 +14,35 @@ from lib.OsrmEngine import *
 from lib.Agents import *
 from lib.Demand import *
 from lib.Constants import *
+from lib.ModeChoice import *
+
+def run_simulation(osrm, step, demand_matrix, fleet_size, veh_capacity, asc_avpt, wait_time_adj, detour_factor):
+	# iteration
+	demand_matrix, demand_volume = set_avpt_demand(step, demand_matrix, asc_avpt, wait_time_adj, detour_factor)
+	# frames record the states of the AMoD model for animation purpose
+	frames = []
+	# initialize the AMoD model
+	model = Model(demand_matrix, demand_volume, V=fleet_size, K=veh_capacity, assign=MET_ASSIGN, rebl=MET_REBL)
+	# start time
+	stime = time.time()
+	# dispatch the system for T_TOTAL seconds, at the interval of INT_ASSIGN
+	for T in range(0, T_TOTAL, INT_ASSIGN):
+		model.dispatch_at_time(osrm, T)
+		if IS_ANIMATION:
+			frames.append(copy.deepcopy(model.vehs))
+	# end time
+	etime = time.time()
+	# run time of this simulation
+	runtime = etime - stime
+
+	# generate, show and save the animation of this simulation
+	if IS_ANIMATION:
+		anime = anim(frames)
+		anime.save('output/anim.mp4', dpi=300, fps=None, extra_args=['-vcodec', 'libx264'])
+		plt.show()
+
+	return model, step, runtime
+
 
 # print and save results
 def print_results(model, step, runtime):

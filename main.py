@@ -35,36 +35,16 @@ if __name__ == "__main__":
 	writer.writerow(row)
 	f.close()
 
-	for veh_capacity in VEH_CAPACITY:
-		for fleet_size in FLEET_SIZE:
-			wait_time_adj = INI_WAIT
-			detour_factor = INI_DETOUR
-			demand_matrix = INI_MAT
-			demand_volume = 0.00
-			for step in range(2):
-				demand_matrix, demand_volume = set_avpt_demand(step, demand_matrix, ASC_AVPT, wait_time_adj, detour_factor)
+	for fleet_size in FLEET_SIZE:
+		veh_capacity = VEH_CAPACITY
+		wait_time_adj = INI_WAIT
+		detour_factor = INI_DETOUR
+		demand_matrix = INI_MAT
+		asc_avpt = ASC_AVPT
 
-				# frames record the states of the AMoD model for animation purpose
-				frames = []
-				# initialize the AMoD model
-				model = Model(demand_matrix, demand_volume, V=fleet_size, K=veh_capacity, assign=MET_ASSIGN, rebl=MET_REBL)
-				# start time
-				stime = time.time()
-				# dispatch the system for T_TOTAL seconds, at the interval of INT_ASSIGN
-				for T in range(0, T_TOTAL, INT_ASSIGN):
-					model.dispatch_at_time(osrm, T)
-					if IS_ANIMATION:
-						frames.append(copy.deepcopy(model.vehs))
-				# end time
-				etime = time.time()
-				# run time of this simulation
-				runtime = etime - stime
-
-				# generate, show and save the animation of this simulation
-				if IS_ANIMATION:
-					anime = anim(frames)
-					anime.save('output/anim.mp4', dpi=300, fps=None, extra_args=['-vcodec', 'libx264'])
-					plt.show()
-
-				# output the simulation results and save data
-				wait_time_adj, detour_factor = print_results(model, step, runtime)
+		#iteration
+		for step in range(ITER_STEPS):
+			# run simulation
+			model, step, runtime = run_simulation(osrm, step, demand_matrix, fleet_size, veh_capacity, asc_avpt, wait_time_adj, detour_factor)
+			# output the simulation results and save data
+			wait_time_adj, detour_factor = print_results(model, step, runtime)
