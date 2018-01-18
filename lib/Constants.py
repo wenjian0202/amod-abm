@@ -64,11 +64,11 @@ MAP_HEIGHT = 4.23
 
 # coordinates
 # (Olng, Olat) lower left corner
-Olng = -71.13
-Olat = 42.345
+Olng = -0.02
+Olat = 51.29
 # (Dlng, Dlat) upper right corner
-Dlng = -71.07
-Dlat = 42.385
+Dlng = 0.18
+Dlat = 51.44
 # number of cells in the gridded map
 Nlng = 10
 Nlat = 10
@@ -76,5 +76,5 @@ Nlat = 10
 Mlng = 5
 Mlat = 5
 # length of edges of a cell
-Elng = 0.006
-Elat = 0.004
+Elng = 0.02
+Elat = 0.015
