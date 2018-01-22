@@ -14,7 +14,35 @@ from lib.OsrmEngine import *
 from lib.Agents import *
 from lib.Demand import *
 from lib.Constants import *
-from lib.Env import *
+from lib.ModeChoice import *
+
+def run_simulation(osrm, step, demand_matrix, fleet_size, veh_capacity, asc_avpt, wait_time_adj, detour_factor):
+	# iteration
+	demand_matrix, demand_volume = set_avpt_demand(step, demand_matrix, asc_avpt, wait_time_adj, detour_factor)
+	# frames record the states of the AMoD model for animation purpose
+	frames = []
+	# initialize the AMoD model
+	model = Model(demand_matrix, demand_volume, V=fleet_size, K=veh_capacity, assign=MET_ASSIGN, rebl=MET_REBL)
+	# start time
+	stime = time.time()
+	# dispatch the system for T_TOTAL seconds, at the interval of INT_ASSIGN
+	for T in range(0, T_TOTAL, INT_ASSIGN):
+		model.dispatch_at_time(osrm, T)
+		if IS_ANIMATION:
+			frames.append(copy.deepcopy(model.vehs))
+	# end time
+	etime = time.time()
+	# run time of this simulation
+	runtime = etime - stime
+
+	# generate, show and save the animation of this simulation
+	if IS_ANIMATION:
+		anime = anim(frames)
+		anime.save('output/anim.mp4', dpi=300, fps=None, extra_args=['-vcodec', 'libx264'])
+		plt.show()
+
+	return model, step, runtime
+
 
 # print and save results
 def print_results(model, step, runtime):
@@ -24,10 +52,13 @@ def print_results(model, step, runtime):
 	count_served = 0
 	count_served_ond = 0
 	count_served_adv = 0
+	wait_time = 0.0
+	wait_time_adj = 0.0
 	wait_time_ond = 0.0
 	wait_time_adv = 0.0
 	in_veh_time = 0.0
 	detour_factor = 0.0
+	benefit = 0.0
 
 	# analyze requests whose earliest pickup time is within the period of study
 	for req in model.reqs:
@@ -44,9 +75,11 @@ def print_results(model, step, runtime):
 				wait_time_adv += 0 if req.OnD else (req.Tp - req.Cep)
 				in_veh_time += (req.Td - req.Tp)
 				detour_factor += req.D
+				benefit += (PRICE_BASE + PRICE_MIN/60 * req.Ts + PRICE_KM/1000 * req.Ds) * PRICE_DISC
 	if not count_served == 0:
 		in_veh_time /= count_served
 		detour_factor /= count_served
+		wait_time = (wait_time_ond + wait_time_adv)/count_served
 	if not count_served_ond == 0:
 		wait_time_ond /= count_served_ond
 	if not count_served_adv == 0:	
@@ -58,6 +91,7 @@ def print_results(model, step, runtime):
 	service_rate_adv = 0.0
 	if not count_reqs == 0:
 		service_rate = 100.0 * count_served / count_reqs
+		wait_time_adj = (wait_time * service_rate + 2*MAX_WAIT * (100-service_rate))/100
 	if not count_reqs_ond == 0:
 		service_rate_ond = 100.0 * count_served_ond / count_reqs_ond
 	if not count_reqs_adv == 0:
@@ -66,53 +100,67 @@ def print_results(model, step, runtime):
 	# vehicle performance
 	veh_service_dist = 0.0
 	veh_service_time = 0.0
+	veh_pickup_dist = 0.0
+	veh_pickup_time = 0.0
 	veh_rebl_dist = 0.0
 	veh_rebl_time = 0.0
 	veh_load_by_dist = 0.0
 	veh_load_by_time = 0.0
+	cost = 0.0
+
 	for veh in model.vehs:
 		veh_service_dist += veh.Ds
 		veh_service_time += veh.Ts
+		veh_pickup_dist += veh.Dp
+		veh_pickup_time += veh.Tp
 		veh_rebl_dist += veh.Dr
 		veh_rebl_time += veh.Tr
-		if not veh.Ds + veh.Dr == 0:
-			veh_load_by_dist += veh.Ld / (veh.Ds + veh.Dr)
+		if not veh.Ds + veh.Dp + veh.Dr == 0:
+			veh_load_by_dist += veh.Ld / (veh.Ds + veh.Dp + veh.Dr)
 		veh_load_by_time += veh.Lt / T_STUDY
+		cost += COST_BASE + COST_MIN/60 * T_STUDY + COST_KM/1000 * (veh.Ds + veh.Dp + veh.Dr)
 	veh_service_dist /= model.V
 	veh_service_time /= model.V
 	veh_service_time_percent = 100.0 * veh_service_time / T_STUDY
+	veh_pickup_dist /= model.V
+	veh_pickup_time /= model.V
+	veh_pickup_time_percent = 100.0 * veh_pickup_time / T_STUDY
 	veh_rebl_dist /= model.V
 	veh_rebl_time /= model.V
 	veh_rebl_time_percent = 100.0 * veh_rebl_time / T_STUDY
 	veh_load_by_dist /= model.V
 	veh_load_by_time /= model.V
 
-	# print("*"*80)
-	# print("scenario: %s, step: %d" % (ASC_NAME, step))
-	# print("simulation starts at %s, runtime time: %d s" % (datetime.datetime.now().strftime("%Y-%m-%d_%H:%M"), runtime))
-	# print("system settings:")
-	# print("  - period of study: %d s, with warm-up %d s, cool-down %d s" % (T_STUDY, T_WARM_UP, T_COOL_DOWN))
-	# print("  - fleet size: %d; capacity: %d" % (model.V, model.K))
-	# print("  - demand Rate: %.1f trips/h" % (model.D))
-	# print("  - assignment method: %s, interval: %.1f s" % (MET_REOPT, INT_ASSIGN))
-	# print("  - reoptimization method: %s, interval: %.1f s" % (MET_REOPT, INT_REOPT))
-	# print("  - rebalancing method: %s, interval: %.1f s" % (MET_REBL, INT_REBL))
-	# print("simulation results:")
-	# print("  - requests:")
-	# print("    + service rate: %.1f%% (%d/%d)" % (service_rate, count_served, count_reqs))
-	# print("      - of which on-demand requests: %.1f%% (%d/%d), wait time: %.1f s" % (service_rate_ond, count_served_ond, count_reqs_ond, wait_time_ond))
-	# print("      - of which in-advance requests: %.1f%% (%d/%d), wait time: %.1f s" % (service_rate_adv, count_served_adv, count_reqs_adv, wait_time_adv))
-	# print("    + in-vehicle travel time: %.1f s" % (in_veh_time))
-	# print("    + detour factor: %.2f" % (detour_factor))
-	# print("  - vehicles:")
-	# print("    + vehicle service distance travelled: %.1f m" % (veh_service_dist))
-	# print("    + vehicle service time travelled: %.1f s" % (veh_service_time))
-	# print("    + vehicle service time percentage: %.1f%%" % (veh_service_time_percent))
-	# print("    + vehicle rebalancing distance travelled: %.1f m" % (veh_rebl_dist))
-	# print("    + vehicle rebalancing time travelled: %.1f s" % (veh_rebl_time))
-	# print("    + vehicle rebalancing time percentage: %.1f%%" % (veh_rebl_time_percent))
-	# print("    + vehicle average load: %.2f (distance weighted), %.2f (time weighted)" % (veh_load_by_dist, veh_load_by_time))
-	# print("*"*80)
+	print("*"*80)
+	print("scenario: %s, step: %d" % (ASC_NAME, step))
+	print("simulation starts at %s, runtime time: %d s" % (datetime.datetime.now().strftime("%Y-%m-%d_%H:%M"), runtime))
+	print("system settings:")
+	print("  - period of study: %d s, with warm-up %d s, cool-down %d s" % (T_STUDY, T_WARM_UP, T_COOL_DOWN))
+	print("  - fleet size: %d; capacity: %d" % (model.V, model.K))
+	print("  - demand valume: %.1f trips/h" % (model.D))
+	print("  - assignment method: %s, interval: %.1f s" % (MET_ASSIGN, INT_ASSIGN))
+	print("  - rebalancing method: %s, interval: %.1f s" % (MET_REBL, INT_REBL))
+	print("simulation results:")
+	print("  - requests:")
+	print("    + service rate: %.1f%% (%d/%d), wait time: %.1f s, adjusted: %.1f s" % (service_rate, count_served, count_reqs, wait_time, wait_time_adj))
+	print("      - of which on-demand requests: %.1f%% (%d/%d), wait time: %.1f s" % (service_rate_ond, count_served_ond, count_reqs_ond, wait_time_ond))
+	print("      - of which in-advance requests: %.1f%% (%d/%d), wait time: %.1f s" % (service_rate_adv, count_served_adv, count_reqs_adv, wait_time_adv))
+	print("    + in-vehicle travel time: %.1f s" % (in_veh_time))
+	print("    + detour factor: %.2f" % (detour_factor))
+	print("  - vehicles:")
+	print("    + vehicle service distance travelled: %.1f m" % (veh_service_dist))
+	print("    + vehicle service time travelled: %.1f s" % (veh_service_time))
+	print("    + vehicle service time percentage: %.1f%%" % (veh_service_time_percent))
+	print("    + vehicle pickup distance travelled: %.1f m" % (veh_pickup_dist))
+	print("    + vehicle pickup time travelled: %.1f s" % (veh_pickup_time))
+	print("    + vehicle pickup time percentage: %.1f%%" % (veh_pickup_time_percent))
+	print("    + vehicle rebalancing distance travelled: %.1f m" % (veh_rebl_dist))
+	print("    + vehicle rebalancing time travelled: %.1f s" % (veh_rebl_time))
+	print("    + vehicle rebalancing time percentage: %.1f%%" % (veh_rebl_time_percent))
+	print("    + vehicle average load: %.2f (distance weighted), %.2f (time weighted)" % (veh_load_by_dist, veh_load_by_time))
+	print("  - cost-benefit analysis:")
+	print("    + cost: %.2f, benefit: %.2f, profit: %.2f" % (cost, benefit, benefit-cost))
+	print("*"*80)
 
 	# write and save the result analysis
 	with open('output/results.csv', 'a', newline='') as f:
@@ -123,7 +171,7 @@ def print_results(model, step, runtime):
 		 veh_rebl_dist, veh_rebl_time, veh_rebl_time_percent, veh_load_by_dist, veh_load_by_time, None]
 		writer.writerow(row)
 
-	# write and save data of all requests
+	# # write and save data of all requests
 	# f = open('output/requests.csv', 'w')
 	# writer = csv.writer(f)
 	# writer.writerow(["id", "olng", "olat", "dlng", "dlat", "Ts", "OnD", "Tr", "Cep", "Tp", "Td", "WT", "VT", "D"])
@@ -134,7 +182,7 @@ def print_results(model, step, runtime):
 	# 		writer.writerow(row)
 	# f.close()
 
-	return wait_time_ond, detour_factor
+	return wait_time_adj, detour_factor
 
 # animation
 def anim(frames):
