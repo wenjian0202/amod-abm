@@ -66,8 +66,8 @@ COEF_WAIT = 1.5
 COEF_INVEH = 1.0
 
 # map width and height
-MAP_WIDTH = 4.65
-MAP_HEIGHT = 4.23
+MAP_WIDTH = 5.52
+MAP_HEIGHT = 6.63
 
 # coordinates
 # (Olng, Olat) lower left corner

@@ -11,6 +11,7 @@ import numpy as np
 from subprocess import Popen, PIPE
 
 from lib.Constants import *
+from local import hostport, osrm_version
 
 class OsrmEngine(object):
     """
@@ -25,7 +26,7 @@ class OsrmEngine(object):
     def __init__(self,
                  exe_loc,
                  map_loc,
-                 ghost = '127.0.0.1',
+                 ghost = hostport,
                  gport = 5000,
                  cst_speed = CST_SPEED):
         if not os.path.isfile(exe_loc):
@@ -69,7 +70,7 @@ class OsrmEngine(object):
             output = p.communicate()[0].decode("utf-8")
         except FileNotFoundError:
             output = ""
-        if "v5.12.0" not in str(output):
+        if osrm_version not in str(output):
             raise Exception("osrm does not have the right version")
         # check no running server
         if self.check_server():
