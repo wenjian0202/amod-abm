@@ -4,3 +4,4 @@ output/
 .stxxl
 **/__pycache__/**
 *.pyc
+paths.py
