@@ -11,6 +11,7 @@ import numpy as np
 from subprocess import Popen, PIPE
 
 from lib.Constants import *
+from local import hostport, osrm_version
 
 class OsrmEngine(object):
     """
@@ -25,7 +26,7 @@ class OsrmEngine(object):
     def __init__(self,
                  exe_loc,
                  map_loc,
-                 ghost = '0.0.0.0',
+                 ghost = hostport,
                  gport = 5000,
                  cst_speed = CST_SPEED):
         if not os.path.isfile(exe_loc):
@@ -45,8 +46,12 @@ class OsrmEngine(object):
 
     # kill any routing server currently running before starting something new
     def kill_server(self):
-        Popen(["killall", os.path.basename(self.exe_loc)], stdin=PIPE, stdout=PIPE, stderr=PIPE)
+        if os.name == 'nt':
+            os.kill(self.pid, 1) # Kill process on windows
+        else:
+            Popen(["killall", os.path.basename(self.exe_loc)], stdin=PIPE, stdout=PIPE, stderr=PIPE) # Kill process on Mac/Unix
         time.sleep(5)
+        self.pid = None
         print( "The routing server \"http://%s:%d\" is killed" % (self.ghost, self.gport) )
         
     # check if server is already running
@@ -65,13 +70,14 @@ class OsrmEngine(object):
             output = p.communicate()[0].decode("utf-8")
         except FileNotFoundError:
             output = ""
-        if "v5.11.0" not in str(output):
+        if osrm_version not in str(output):
             raise Exception("osrm does not have the right version")
         # check no running server
         if self.check_server():
             raise Exception("osrm-routed already running")
         # start server
         p = Popen([self.exe_loc, self.map_loc], stdin=PIPE, stdout=PIPE, stderr=PIPE)
+        self.pid = p.pid
         time.sleep(5)
         if requests.get("http://%s:%d" % (self.ghost, self.gport)).status_code == 400:
             print( "The routing server \"http://%s:%d\" starts running" % (self.ghost, self.gport) )

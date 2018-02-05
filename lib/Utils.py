@@ -163,15 +163,13 @@ def print_results(model, step, runtime):
 	print("*"*80)
 
 	# write and save the result analysis
-	f = open('output/results.csv', 'a')
-	writer = csv.writer(f)
-	row = [ASC_NAME, step, MET_ASSIGN, MET_REBL, T_STUDY, model.V, model.K, model.D,
-	 service_rate, count_served, count_reqs, service_rate_ond, count_served_ond, count_reqs_ond, service_rate_adv, count_served_adv, count_reqs_adv,
-	 wait_time, wait_time_adj, wait_time_ond, wait_time_adv, in_veh_time, detour_factor, 
-	 veh_service_dist, veh_service_time, veh_service_time_percent, veh_pickup_dist, veh_pickup_time, veh_pickup_time_percent, 
-	 veh_rebl_dist, veh_rebl_time, veh_rebl_time_percent, veh_load_by_dist, veh_load_by_time, None]
-	writer.writerow(row)
-	f.close()
+	with open('output/results.csv', 'a', newline='') as f:
+		writer = csv.writer(f)
+		row = [ASC_NAME, step, MET_ASSIGN, MET_REOPT, MET_REBL, T_STUDY, model.V, model.K, model.D,
+		 service_rate, count_served, count_reqs, service_rate_ond, count_served_ond, count_reqs_ond, service_rate_adv, count_served_adv, count_reqs_adv,
+		 wait_time_ond, wait_time_adv, in_veh_time, detour_factor, veh_service_dist, veh_service_time, veh_service_time_percent, 
+		 veh_rebl_dist, veh_rebl_time, veh_rebl_time_percent, veh_load_by_dist, veh_load_by_time, None]
+		writer.writerow(row)
 
 	# # write and save data of all requests
 	# f = open('output/requests.csv', 'w')

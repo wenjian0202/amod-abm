@@ -6,21 +6,13 @@ from lib.Agents import *
 from lib.Demand import *
 from lib.Constants import *
 from lib.ModeChoice import *
+from local import exe_loc, map_loc
 
 
 if __name__ == "__main__":
-	# path of the routing server
-	exe_loc = './osrm-backend-5.11.0/build/osrm-routed'
-	# path of the road network file that the routing server uses
-	map_loc = './osrm-backend-5.11.0/greater-london-latest.osrm'
-
 	# if road network is enabled, initialize the routing server
 	# otherwise, use Euclidean distance
 	osrm = OsrmEngine(exe_loc, map_loc)
-	osrm.start_server()
-	osrm.kill_server()
-	osrm.start_server()
-	osrm.kill_server()
 	osrm.start_server()
 
 	f = open('output/results.csv', 'a')

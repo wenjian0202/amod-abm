@@ -144,4 +144,3 @@ If you use `amod-abm` in your research, you can cite it as follows:
     howpublished = {\url{https://github.com/wenjian0202/amod-abm}},
 }
 ```
-

@@ -33,8 +33,6 @@ T_WARM_UP = 60*30
 T_STUDY = 60*60
 T_COOL_DOWN = 60*30
 T_TOTAL = (T_WARM_UP + T_STUDY + T_COOL_DOWN)
-# time before which system gets notified of the in-advance requests
-T_ADV_REQ = 60*30
 
 # methods for vehicle-request assignment and rebalancing
 # ins = insertion heuristics
@@ -57,6 +55,11 @@ MAX_WAIT = 60*10
 
 # constant vehicle speed when road network is disabled (in meters/second)
 CST_SPEED = 6
+
+# probability that a request is sent in advance (otherwise, on demand)
+PROB_ADV = 0.0
+# time before which system gets notified of the in-advance requests
+T_ADV_REQ = 60*30
 
 # coefficients for wait time and in-vehicle travel time in the utility function
 COEF_WAIT = 1.5
