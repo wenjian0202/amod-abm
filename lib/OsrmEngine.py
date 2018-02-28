@@ -8,13 +8,10 @@ import json
 import time
 import math
 import numpy as np
-import threading
-
 from subprocess import Popen, PIPE
 
 from lib.Constants import *
 from local import hostport, osrm_version
-
 
 class OsrmEngine(object):
     """
@@ -98,19 +95,16 @@ class OsrmEngine(object):
             Client.execute(self.simg_loc, ['osrm-partition',osrm_map])
             Client.execute(self.simg_loc, ['osrm-customize',osrm_map])
 
+            import multiprocessing
+
             def run_simg_server(simg_loc, osrm_map):
-                
                 Client.execute(simg_loc, ['osrm-routed','--algorithm','mld',osrm_map])
 
-            thread = threading.Thread(target=run_simg_server, args=(self.simg_loc, self.osrm_map))
-            thread.start()
-            self.process = thread
+            server_process = multiprocessing.Process(
+                name='server', target=run_simg_server, args=(self.simg_loc, self.osrm_map))
 
-            # server_process = multiprocessing.Process(
-            #     name='server', target=run_simg_server, args=(self.simg_loc, self.osrm_map))
-
-            # server_process.start()
-            # self.process = server_process
+            server_process.start()
+            self.process = server_process
 
             time.sleep(5)
 
