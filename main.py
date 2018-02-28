@@ -6,13 +6,13 @@ from lib.Agents import *
 from lib.Demand import *
 from lib.Constants import *
 from lib.ModeChoice import *
-from local import exe_loc, map_loc
+from local import exe_loc, map_loc, use_singularity, simg_loc
 
 
 if __name__ == "__main__":
 	# if road network is enabled, initialize the routing server
 	# otherwise, use Euclidean distance
-	osrm = OsrmEngine(exe_loc, map_loc)
+	osrm = OsrmEngine(exe_loc, map_loc. use_singularity=use_singularity, simg_loc=simg_loc)
 	osrm.start_server()
 
 	f = open('output/results.csv', 'a')

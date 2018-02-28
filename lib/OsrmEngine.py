@@ -17,8 +17,10 @@ class OsrmEngine(object):
     """
     OsrmEngine is the class for the routing server
     Attributes:
-        exe_loc: path of the routing server (osrm-routed executable)
-        map_loc: path of the road network file
+        exe_loc: path of the routing server (osrm-routed executable) (irrelevant if using singularity)
+        map_loc: path of the road network file (if using singularity, path of the .osm.pbf file)
+        use_singularity: true if using singularity to access osrm-backend image
+        simg_loc: path of the singularity image file
         ghost: host ip address
         gport: host port
         cst_speed: constant vehicle speed when road network is disabled (in meters/second
@@ -26,6 +28,8 @@ class OsrmEngine(object):
     def __init__(self,
                  exe_loc,
                  map_loc,
+                 use_singularity=False,
+                 simg_loc=None,
                  ghost = hostport,
                  gport = 5000,
                  cst_speed = CST_SPEED):
@@ -33,10 +37,20 @@ class OsrmEngine(object):
             raise Exception("Could not find the routing server at %s" % exe_loc)
         else:
             self.exe_loc = exe_loc
+
         if not os.path.isfile(map_loc):
             raise Exception("Could not find osrm road network data at %s" % map_loc)
         else:
             self.map_loc = map_loc
+
+        if use_singularity and simg_loc is None:
+            raise Exception("If using singularity, image to osrm-backend singularity image must be provided")
+        elif use_singularity and not os.path.isfile(simg_loc):
+            raise Exception("Could not find osrm-backend singularity image at %s" % simg_loc)
+        else:
+            self.use_singularity = use_singularity
+            self.simg_loc = simg_loc
+
         self.ghost = ghost
         self.gport = gport
         self.cst_speed = cst_speed
@@ -46,11 +60,14 @@ class OsrmEngine(object):
 
     # kill any routing server currently running before starting something new
     def kill_server(self):
-        if os.name == 'nt':
+        if self.use_singularity:
+            self.process.terminate()
+        elif os.name == 'nt':
             os.kill(self.pid, 1) # Kill process on windows
         else:
             Popen(["killall", os.path.basename(self.exe_loc)], stdin=PIPE, stdout=PIPE, stderr=PIPE) # Kill process on Mac/Unix
         time.sleep(5)
+        self.process = None
         self.pid = None
         print( "The routing server \"http://%s:%d\" is killed" % (self.ghost, self.gport) )
         
@@ -64,25 +81,58 @@ class OsrmEngine(object):
     
     # start the routing server
     def start_server(self):
-        # check file
-        try:
-            p = Popen([self.exe_loc, '-v'], stdin=PIPE, stdout=PIPE, stderr=PIPE)
-            output = p.communicate()[0].decode("utf-8")
-        except FileNotFoundError:
-            output = ""
-        if osrm_version not in str(output):
-            raise Exception("osrm does not have the right version")
-        # check no running server
-        if self.check_server():
-            raise Exception("osrm-routed already running")
-        # start server
-        p = Popen([self.exe_loc, self.map_loc], stdin=PIPE, stdout=PIPE, stderr=PIPE)
-        self.pid = p.pid
-        time.sleep(5)
-        if requests.get("http://%s:%d" % (self.ghost, self.gport)).status_code == 400:
-            print( "The routing server \"http://%s:%d\" starts running" % (self.ghost, self.gport) )
-        else:
-            raise Exception("Map could not be loaded")
+        if self.use_singularity: # If we are running on MGHPCC or another environment with a singularity image of osrm-backend
+            map_directory = os.path.dirname(map_loc)
+            map_basename = os.path.basename(map_loc).split('.')[0]
+
+            from spython.main import Client
+            Client.execute(simg_loc, ['osrm-extract','-p','/opt/car.lua',map_loc])
+
+            osrm_map = os.path.join(map_directory, (map_basename + '.osrm'))
+            if not os.path.isfile(osrm_map):
+                raise Exception("%s failed to create during osrm-extract" % osrm_map)
+            
+            Client.execute(simg_loc, ['osrm-partition',osrm_map])
+            Client.execute(simg_loc, ['osrm-customize',osrm_map])
+
+            import multiprocessing
+
+            def run_simg_server(simg_loc, osrm_map):
+                Client.execute(simg_loc, ['osrm-routed','--algorithm','mld',osrm_map])
+
+            server_process = multiprocessing.Process(
+                name='server', target=run_simg_server, args=(simg_loc, osrm_map))
+
+            server_process.start()
+            self.process = server_process
+
+            time.sleep(5)
+
+            if server_process.is_alive() and requests.get("http://%s:%d" % (self.ghost, self.gport)).status_code == 400:
+                print( "The routing server \"http://%s:%d\" starts running" % (self.ghost, self.gport) )
+            else:
+                raise Exception("Map could not be loaded")
+
+        else: # If we are running locally and do not need to use singularity to access osrm-backend
+            # check file
+            try:
+                p = Popen([self.exe_loc, '-v'], stdin=PIPE, stdout=PIPE, stderr=PIPE)
+                output = p.communicate()[0].decode("utf-8")
+            except FileNotFoundError:
+                output = ""
+            if osrm_version not in str(output):
+                raise Exception("osrm does not have the right version")
+            # check no running server
+            if self.check_server():
+                raise Exception("osrm-routed already running")
+            # start server
+            p = Popen([self.exe_loc, self.map_loc], stdin=PIPE, stdout=PIPE, stderr=PIPE)
+            self.pid = p.pid
+            time.sleep(5)
+            if requests.get("http://%s:%d" % (self.ghost, self.gport)).status_code == 400:
+                print( "The routing server \"http://%s:%d\" starts running" % (self.ghost, self.gport) )
+            else:
+                raise Exception("Map could not be loaded")
     
     # restart the routing server        
     def restart_server(self):
