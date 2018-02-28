@@ -6,9 +6,6 @@ import csv
 import copy
 import numpy as np
 import datetime
-import matplotlib.pyplot as plt
-from matplotlib import animation
-import matplotlib.image as mpimg
 
 from lib.OsrmEngine import *
 from lib.Agents import *
@@ -37,6 +34,10 @@ def run_simulation(osrm, step, demand_matrix, fleet_size, veh_capacity, asc_avpt
 
 	# generate, show and save the animation of this simulation
 	if IS_ANIMATION:
+		import matplotlib.pyplot as plt
+		from matplotlib import animation
+		import matplotlib.image as mpimg
+
 		anime = anim(frames)
 		anime.save('output/anim.mp4', dpi=300, fps=None, extra_args=['-vcodec', 'libx264'])
 		plt.show()
