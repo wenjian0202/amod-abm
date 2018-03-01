@@ -100,13 +100,15 @@ class OsrmEngine(object):
             def run_simg_server(simg_loc, osrm_map):
                 Client.execute(simg_loc, ['osrm-routed','--algorithm','mld',osrm_map])
 
+            print('About to start server.')
             server_process = multiprocessing.Process(
-                name='server', target=run_simg_server, args=(self.simg_loc, self.osrm_map))
+                name='server', target=run_simg_server, args=(self.simg_loc, osrm_map))
 
+            print('Starting server....')
             server_process.start()
             self.process = server_process
 
-            time.sleep(5)
+            time.sleep(2)
 
             if server_process.is_alive() and requests.get("http://%s:%d" % (self.ghost, self.gport)).status_code == 400:
                 print( "The routing server \"http://%s:%d\" starts running" % (self.ghost, self.gport) )
