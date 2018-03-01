@@ -98,7 +98,7 @@ class OsrmEngine(object):
             import multiprocessing
 
             def run_simg_server(simg_loc, osrm_map):
-                Client.execute(simg_loc, ['osrm-routed','--algorithm','mld',osrm_map])
+                Client.execute(simg_loc, ['osrm-routed','--algorithm','mld','-p',gport,osrm_map])
 
             print('About to start server.')
             server_process = multiprocessing.Process(
@@ -118,7 +118,7 @@ class OsrmEngine(object):
         else: # If we are running locally and do not need to use singularity to access osrm-backend
             # check file
             try:
-                p = Popen([self.exe_loc, '-v'], stdin=PIPE, stdout=PIPE, stderr=PIPE)
+                p = Popen([self.exe_loc, '-v', '-p', gport], stdin=PIPE, stdout=PIPE, stderr=PIPE)
                 output = p.communicate()[0].decode("utf-8")
             except FileNotFoundError:
                 output = ""

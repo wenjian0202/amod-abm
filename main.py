@@ -1,3 +1,4 @@
+import sys
 import time
 
 from lib.Utils import *
@@ -10,9 +11,18 @@ from local import exe_loc, map_loc, use_singularity, simg_loc
 
 
 if __name__ == "__main__":
+	print(sys.argv)
+	if len(sys.argv) > 1:
+		try:
+			osrm_port = int(sys.argv[1])
+		except:
+			raise Exception("First argument must be an integer port number for osrm-backend to use")
+	else:
+		osrm_port = 5000
+
 	# if road network is enabled, initialize the routing server
 	# otherwise, use Euclidean distance
-	osrm = OsrmEngine(exe_loc, map_loc, use_singularity=use_singularity, simg_loc=simg_loc)
+	osrm = OsrmEngine(exe_loc, map_loc, use_singularity=use_singularity, simg_loc=simg_loc, gport=osrm_port)
 	osrm.start_server()
 
 	f = open('output/results.csv', 'a')
