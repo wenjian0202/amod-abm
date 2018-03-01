@@ -92,8 +92,9 @@ class OsrmEngine(object):
             if not os.path.isfile(osrm_map):
                 raise Exception("%s failed to create during osrm-extract" % osrm_map)
             
-            Client.execute(self.simg_loc, ['osrm-partition',osrm_map])
-            Client.execute(self.simg_loc, ['osrm-customize',osrm_map])
+            Client.execute(self.simg_loc, ['osrm-partition', osrm_map])
+            Client.execute(self.simg_loc, ['osrm-customize', osrm_map])
+            Client.execute(self.simg_loc, ['osrm-contract', osrm_map])
 
             import multiprocessing
 
