@@ -24,6 +24,10 @@ if __name__ == "__main__":
 	# otherwise, use Euclidean distance
 	osrm = OsrmEngine(exe_loc, map_loc, use_singularity=use_singularity, simg_loc=simg_loc, gport=osrm_port)
 	osrm.start_server()
+	osrm.kill_server()
+	osrm.start_server()
+	osrm.kill_server()
+	osrm.start_server()
 
 	f = open('output/results.csv', 'a')
 	writer = csv.writer(f)

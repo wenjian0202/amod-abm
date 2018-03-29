@@ -38,6 +38,7 @@ T_TOTAL = (T_WARM_UP + T_STUDY + T_COOL_DOWN)
 # ins = insertion heuristics
 # sar = simple anticipatory rebalancing, orp = optimal rebalancing problem, dqn = deep Q network
 MET_ASSIGN = "ins"
+MET_REOPT = "no"
 MET_REBL = "orp"
 
 # intervals for vehicle-request assignment and rebalancing

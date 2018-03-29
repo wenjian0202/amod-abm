@@ -63,10 +63,11 @@ class OsrmEngine(object):
         if self.use_singularity:
             self.process.terminate()
         elif os.name == 'nt':
-            os.kill(self.pid, 1) # Kill process on windows
+            # os.kill(self.pid, 1) # Kill process on windows
+            os.system("taskkill /f /im osrm-routed.exe") # Kill process on windows
         else:
             Popen(["killall", os.path.basename(self.exe_loc)], stdin=PIPE, stdout=PIPE, stderr=PIPE) # Kill process on Mac/Unix
-        time.sleep(5)
+        time.sleep(2)
         self.process = None
         self.pid = None
         print( "The routing server \"http://%s:%d\" is killed" % (self.ghost, self.gport) )
