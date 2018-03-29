@@ -6,7 +6,6 @@ import numpy as np
 import copy
 import math
 from collections import deque
-import matplotlib.pyplot as plt
 import itertools
 
 from lib.Demand import *
@@ -393,6 +392,7 @@ class Veh(object):
     
     # visualize
     def draw(self):
+        import matplotlib.pyplot as plt
         color = "0.50"
         if self.id == 0:
             color = "red"
@@ -419,7 +419,7 @@ class Veh(object):
             self.id, self.lng, self.lat, self.T, "rebalancing" if self.rebl else "idle" if self.idle else "in service", self.n, self.K)
         str += "\n  service dist/time: %.1f, %.1f; rebalancing dist/time: %.1f, %.1f" % (
             self.Ds, self.Ts, self.Dr, self.Tr)
-        str += "\n  has %d leg(s), dist = %.1f, dura = %.1f，cost = %.1f" % (
+        str += "\n  has %d leg(s), dist = %.1f, dura = %.1f, cost = %.1f" % (
             len(self.route), self.d, self.t, self.c)
         for leg in self.route:
             str += "\n    %s req %d at (%.7f, %.7f), dist = %.1f, dura = %.1f" % (
@@ -476,6 +476,7 @@ class Req(object):
     
     # visualize
     def draw(self):
+        import matplotlib.pyplot as plt
         plt.plot(self.olng, self.olat, 'r', marker='+')
         plt.plot(self.dlng, self.dlat, 'r', marker='x')
         plt.plot([self.olng, self.dlng], [self.olat, self.dlat], 'r', linestyle='--', dashes=(0.5,1.5))
@@ -807,6 +808,7 @@ class Model(object):
     
     # visualize
     def draw(self):
+        import matplotlib.pyplot as plt
         fig = plt.figure(figsize=(5,6))
         plt.xlim((-0.02,0.18))
         plt.ylim((51.29,51.44))
