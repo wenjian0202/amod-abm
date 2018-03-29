@@ -1,0 +1,7 @@
+osrm-backend-5.11.0/**
+output/
+.DS_STORE
+.stxxl
+**/__pycache__/**
+*.pyc
+local.py
