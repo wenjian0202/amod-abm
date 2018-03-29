@@ -124,7 +124,8 @@ def main_CBD(filename, ASC_AVPT, WAIT_TIME, DETOUR_FACTOR):
 	
 	df['AVPT_choice'] = df['prob_AVPT'] * df['expan_fac/10']    
 	
-	df_return = df[['ttrip_id','oeast','onrth','deast','denrth','expan_fac','expan_fac/10','AVPT_choice']]
+	df_return = df[['ttrip_id','expan_fac','expan_fac/10','AVPT_choice']]
+	# df_return = df[['ttrip_id','oeast','onrth','deast','denrth','expan_fac','expan_fac/10','AVPT_choice']]
 
 	return df_return
 
@@ -191,7 +192,10 @@ def main_intrazonal(filename, ASC_AVPT, WAIT_TIME, DETOUR_FACTOR):
 					/df['exp_sum'] * df['AVPT_utility']/df['sum_transit_utility']
 	df['AVPT_choice'] = df['prob_AVPT'] * df['expan_fac/10']
 	
-	df_return = df[['ttrip_id','oeast','onrth','deast','denrth','expan_fac','expan_fac/10','AVPT_choice']]
+
+	df_return = df[['ttrip_id','expan_fac','expan_fac/10','AVPT_choice']]
+	# df_return = df[['ttrip_id','oeast','onrth','deast','denrth','expan_fac','expan_fac/10','AVPT_choice']]
+
 	return df_return
 
 def set_avpt_demand(step, demand_matrix, ASC_AVPT, WAIT_TIME, DETOUR_FACTOR):
