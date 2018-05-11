@@ -1,5 +1,8 @@
+lib/Demand.py
+lib/ModeData/**
 osrm-backend-5.11.0/**
 output/
+media/
 .DS_STORE
 .stxxl
 **/__pycache__/**
